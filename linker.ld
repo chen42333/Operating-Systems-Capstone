@@ -1,7 +1,7 @@
 ENTRY(_start)
 MEMORY
 {
-  MEM(rwx) : ORIGIN = 0x80000, LENGTH = 64K
+  MEM(rwx) : ORIGIN = 0x80000, LENGTH = 128K
 }
 SECTIONS
 {
@@ -9,6 +9,11 @@ SECTIONS
     _stext = .;
     *(.text)
     _etext = .;
+  } > MEM
+  .rodata : { 
+    _srodata = .;
+    *(.rodata)
+    _erodata = .;
   } > MEM
   .data : { 
     _sdata = .;
@@ -21,5 +26,5 @@ SECTIONS
     _ebss = .;
   } > MEM
 
-  _estack = 0xf0000;
+  _estack = 0x100000;
 }

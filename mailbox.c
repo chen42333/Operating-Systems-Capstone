@@ -1,0 +1,70 @@
+#include "uart.h"
+#include "mailbox.h"
+
+void mailbox_call(uint32_t *mailbox)
+{
+    uint32_t data = ((unsigned long)mailbox & ~0xf) | 8;
+    uint32_t *ptr;
+
+    ptr = (uint32_t*)MAILBOX_STATUS;
+    while (*ptr & MAILBOX_FULL) ;
+    ptr = (uint32_t*)MAILBOX_WRITE;
+    *ptr = data;
+    ptr = (uint32_t*)MAILBOX_STATUS;
+    while (*ptr & MAILBOX_EMPTY) ;
+    ptr = (uint32_t*)MAILBOX_READ;
+    while (*ptr != data) ;
+}
+
+void mailbox_request(int n_buf, uint32_t tag, uint32_t *data)
+{
+    int n = n_buf + 6;
+    __attribute__((aligned(16))) uint32_t mailbox[n];
+    mailbox[0] = n * 4;
+    mailbox[1] = REQUEST_CODE;
+    mailbox[2] = tag;
+    mailbox[3] = n_buf * sizeof(uint32_t);
+    mailbox[4] = TAG_REQUEST_CODE;
+    for (int i = 5; i < n - 1; i++)
+        mailbox[i] = 0; // buffer
+    mailbox[n - 1] = END_TAG;
+
+    mailbox_call(mailbox);
+
+    for (int i = 0; i < n_buf; i++)
+        data[i] = mailbox[5 + i];
+}
+
+void get_board_revision()
+{
+    int n_buf = 1;
+    uint32_t data[n_buf];
+    mailbox_request(n_buf, GET_BOARD_REVISION, data);
+
+    uart_write_string("Board revision: ");
+    uart_write_hex(data[0]);
+    uart_write_char('\n');
+}
+
+void get_memory_info()
+{
+    int n_buf = 2;
+    uint32_t data[n_buf];
+    mailbox_request(2, GET_ARM_MEMORY, data);
+
+
+    uart_write_string("ARM memory base address: ");
+    uart_write_hex(data[0]);
+    uart_write_char('\n');
+    uart_write_string("ARM memory size: ");
+    uart_write_hex(data[1]);
+    uart_write_char('\n');
+}
+
+void mailbox_info()
+{
+    uart_write_string("Mailbox info:\n");
+    get_board_revision();
+    get_memory_info();
+    return;
+}
