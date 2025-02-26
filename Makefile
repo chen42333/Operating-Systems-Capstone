@@ -1,5 +1,7 @@
 CC = clang
-CFLAGS = -mcpu=cortex-a53 --target=aarch64-rpi3-elf
+CFLAGS = -mcpu=cortex-a53 --target=aarch64-rpi3-elf \
+	-g -Wall -nostdlib -ffreestanding \
+	-mno-unaligned-access -mgeneral-regs-only
 LINKER = ld.lld
 LINKFLAGS = -m aarch64elf
 LINKFILE = linker.ld
@@ -23,6 +25,9 @@ debug: all $(OBJS)
 	
 asm: all $(OBJS)
 	$(EXEC) -d in_asm
+
+int: all $(OBJS)
+	$(EXEC) -d int
 
 kernel8.img: kernel8.elf $(OBJS)
 	$(OBJCPY) $(OBJCPYFLAGS) $< $@

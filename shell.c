@@ -37,15 +37,15 @@ int main()
         uart_write_string("# ");
         uart_read(cmd, STRLEN);
         if (!strcmp("help", cmd))
-            uart_write_string("help\t: print this help menu\n"
-                    "hello\t: print Hello World!\n"
-                    "mailbox\t: print hardware's information\n");
+            uart_write_string("help\t: print this help menu\r\n"
+                    "hello\t: print Hello World!\r\n"
+                    "mailbox\t: print hardware's information\r\n");
         else if (!strcmp("hello", cmd))
-            uart_write_string("Hello World!\n");
+            uart_write_string("Hello World!\r\n");
         else if (!strcmp("mailbox", cmd))
             mailbox_info();
         else
-            uart_write_string("Invalid command\n");
+            uart_write_string("Invalid command\r\n");
     }
     return 0;
 }

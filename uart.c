@@ -3,7 +3,7 @@
 
 void uart_init()
 {
-    uint32_t *ptr = (uint32_t*)GPFSEL1;
+    volatile uint32_t *ptr = (uint32_t*)GPFSEL1;
     // Set GPIO 14, 15 to ALT5
     *ptr &= ~((7 << 12) | (7 << 15));
     *ptr |= (2 << 12) | (2 << 15);
@@ -43,7 +43,7 @@ void uart_init()
 
 int uart_write_char(char c)
 {
-    uint32_t *lsr = (uint32_t*)AUX_MU_LSR_REG;
+    volatile uint32_t *lsr = (uint32_t*)AUX_MU_LSR_REG;
     char *io = (char*)AUX_MU_IO_REG;
 
     while (!(*lsr & (1 << 5))) ;
@@ -62,13 +62,16 @@ int uart_write_string(char *str)
 
 int uart_write_hex(unsigned int num)
 {
-    char hex_digits[] = "0123456789abcdef";
     char buf[sizeof(unsigned int) * 2 + 1];
 
     uart_write_string("0x");
     for (int i = sizeof(unsigned int) * 2 - 1; i >= 0 ; i--)
     {
-        buf[i] = hex_digits[num % 16];
+        unsigned int byte = num % 16;
+        if (byte < 10)
+            buf[i] = byte + '0';
+        else
+            buf[i] = byte - 10 + 'a';
         num >>= 4;
     }
     
@@ -80,7 +83,7 @@ int uart_write_hex(unsigned int num)
 
 int uart_read(char *str, unsigned int size)
 {
-    uint32_t *lsr = (uint32_t*)AUX_MU_LSR_REG;
+    volatile uint32_t *lsr = (uint32_t*)AUX_MU_LSR_REG;
     char *io = (char*)AUX_MU_IO_REG;
     int i;
     char c;
@@ -102,7 +105,7 @@ int uart_read(char *str, unsigned int size)
         }
         else if (c == '\r')
         {
-            uart_write_char('\n');
+            uart_write_string("\r\n");
             break;
         }
         else if (c == '\0' || c == '\n')

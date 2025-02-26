@@ -4,7 +4,7 @@
 void mailbox_call(uint32_t *mailbox)
 {
     uint32_t data = ((unsigned long)mailbox & ~0xf) | 8;
-    uint32_t *ptr;
+    volatile uint32_t *ptr;
 
     ptr = (uint32_t*)MAILBOX_STATUS;
     while (*ptr & MAILBOX_FULL) ;
@@ -43,7 +43,7 @@ void get_board_revision()
 
     uart_write_string("Board revision: ");
     uart_write_hex(data[0]);
-    uart_write_char('\n');
+    uart_write_string("\r\n");
 }
 
 void get_memory_info()
@@ -52,18 +52,17 @@ void get_memory_info()
     uint32_t data[n_buf];
     mailbox_request(2, GET_ARM_MEMORY, data);
 
-
     uart_write_string("ARM memory base address: ");
     uart_write_hex(data[0]);
-    uart_write_char('\n');
+    uart_write_string("\r\n");
     uart_write_string("ARM memory size: ");
     uart_write_hex(data[1]);
-    uart_write_char('\n');
+    uart_write_string("\r\n");
 }
 
 void mailbox_info()
 {
-    uart_write_string("Mailbox info:\n");
+    uart_write_string("Mailbox info:\r\n");
     get_board_revision();
     get_memory_info();
     return;
