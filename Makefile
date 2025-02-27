@@ -1,39 +1,44 @@
 CC = clang
 CFLAGS = -mcpu=cortex-a53 --target=aarch64-rpi3-elf \
-	-g -Wall -nostdlib -ffreestanding \
+	-g -Wall -MMD -MP -nostdlib -ffreestanding \
 	-mno-unaligned-access -mgeneral-regs-only
-LINKER = ld.lld
-LINKFLAGS = -m aarch64elf
-LINKFILE = linker.ld
+LD = ld.lld
+LDFLAGS = -m aarch64elf
+LDFILE = linker.ld
 OBJCPY = llvm-objcopy
 OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 
-OBJS = kernel8.o shell.o uart.o mailbox.o
+SRCS = kernel8.S shell.c uart.c mailbox.c
+OBJS = $(SRCS:.c=.o) $(SRCS:.S=.o)
+DEPS = $(OBJS:.o=.d)
 PROGS = kernel8.img kernel8.elf
 
-EXEC = qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+QEMU = qemu-system-aarch64
+QEMUFLAGS = -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
 
-.PHONY = clean all test asm
+.PHONY = clean all test debug asm int
 
 all: kernel8.img
 
-test: all $(OBJS)
-	$(EXEC)
+test: kernel8.img
+	$(QEMU) $(QEMUFLAGS)
 
-debug: all $(OBJS)
-	$(EXEC) -S -s
+debug: kernel8.img
+	$(QEMU) $(QEMUFLAGS) -S -s
 	
-asm: all $(OBJS)
-	$(EXEC) -d in_asm
+asm: kernel8.img
+	$(QEMU) $(QEMUFLAGS) -d in_asm
 
-int: all $(OBJS)
-	$(EXEC) -d int
+int: kernel8.img
+	$(QEMU) $(QEMUFLAGS) -d int
 
-kernel8.img: kernel8.elf $(OBJS)
+kernel8.img: kernel8.elf
 	$(OBJCPY) $(OBJCPYFLAGS) $< $@
 
 kernel8.elf: $(OBJS)
-	$(LINKER) $(LINKFLAGS) -T $(LINKFILE) -o $@ $^
+	$(LD) $(LDFLAGS) -T $(LDFILE) -o $@ $^
+
+-include $(DEPS)
 
 %.o: %.S
 	$(CC) $(CFLAGS) -c $< -o $@
