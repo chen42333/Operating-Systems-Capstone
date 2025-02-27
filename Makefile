@@ -9,7 +9,8 @@ OBJCPY = llvm-objcopy
 OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 
 SRCS = kernel8.S shell.c uart.c mailbox.c
-OBJS = $(SRCS:.c=.o) $(SRCS:.S=.o)
+OBJS = $(SRCS:.c=.o)
+OBJS := $(OBJS:.S=.o)
 DEPS = $(OBJS:.o=.d)
 TARGET = kernel8.img
 PROGS = $(TARGET) kernel8.elf
