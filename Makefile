@@ -11,25 +11,26 @@ OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 SRCS = kernel8.S shell.c uart.c mailbox.c
 OBJS = $(SRCS:.c=.o) $(SRCS:.S=.o)
 DEPS = $(OBJS:.o=.d)
-PROGS = kernel8.img kernel8.elf
+TARGET = kernel8.img
+PROGS = $(TARGET) kernel8.elf
 
 QEMU = qemu-system-aarch64
-QEMUFLAGS = -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+QEMUFLAGS = -M raspi3b -kernel $(TARGET) -display none -serial null -serial stdio
 
 .PHONY = clean all test debug asm int
 
-all: kernel8.img
+all: $(TARGET)
 
-test: kernel8.img
+test: $(TARGET)
 	$(QEMU) $(QEMUFLAGS)
 
-debug: kernel8.img
+debug: $(TARGET)
 	$(QEMU) $(QEMUFLAGS) -S -s
 	
-asm: kernel8.img
+asm: $(TARGET)
 	$(QEMU) $(QEMUFLAGS) -d in_asm
 
-int: kernel8.img
+int: $(TARGET)
 	$(QEMU) $(QEMUFLAGS) -d int
 
 kernel8.img: kernel8.elf
@@ -47,4 +48,4 @@ kernel8.elf: $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
    
 clean:
-	rm -f $(OBJS) $(PROGS)
+	rm -f $(OBJS) $(DEPS) $(PROGS)
