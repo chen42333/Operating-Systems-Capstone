@@ -8,7 +8,7 @@ LDFILE = linker.ld
 OBJCPY = llvm-objcopy
 OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 
-SRCS = kernel8.S shell.c uart.c mailbox.c
+SRCS = kernel8.S shell.c uart.c mailbox.c utils.c boot.c
 OBJS = $(SRCS:.c=.o)
 OBJS := $(OBJS:.S=.o)
 DEPS = $(OBJS:.o=.d)

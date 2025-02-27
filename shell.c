@@ -1,31 +1,7 @@
+#include "utils.h"
 #include "uart.h"
 #include "mailbox.h"
-
-#define true 1
-#define false 0
-#define STRLEN 256
-
-void err(char *str)
-{
-    uart_write_string("Error:\t");
-    uart_write_string(str);
-    return;
-}
-
-int strcmp(const char *str1, const char *str2)
-{
-    for (int i = 0; ; i++)
-    {
-
-        if (str1[i] < str2[i])
-            return -1;
-        if (str1[i] > str2[i])
-            return 1;
-        if (str1[i] == '\0' && str2[i] == '\0')
-            break;
-    }
-    return 0;
-}
+#include "boot.h"
 
 int main()
 {
@@ -39,11 +15,14 @@ int main()
         if (!strcmp("help", cmd))
             uart_write_string("help\t: print this help menu\r\n"
                     "hello\t: print Hello World!\r\n"
-                    "mailbox\t: print hardware's information\r\n");
+                    "mailbox\t: print hardware's information\r\n"
+                    "reboot\t: reboot the device\r\n");
         else if (!strcmp("hello", cmd))
             uart_write_string("Hello World!\r\n");
         else if (!strcmp("mailbox", cmd))
             mailbox_info();
+        else if (!strcmp("reboot", cmd))
+                reset(1);
         else
             uart_write_string("Invalid command\r\n");
     }

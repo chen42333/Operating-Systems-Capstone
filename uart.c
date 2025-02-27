@@ -1,53 +1,41 @@
 #include <stdint.h>
+#include "utils.h"
 #include "uart.h"
 
 void uart_init()
 {
-    volatile uint32_t *ptr = (uint32_t*)GPFSEL1;
+    uint32_t data;
     // Set GPIO 14, 15 to ALT5
-    *ptr &= ~((7 << 12) | (7 << 15));
-    *ptr |= (2 << 12) | (2 << 15);
+    data = get32(GPFSEL1);
+    data &= ~((7 << 12) | (7 << 15));
+    data |= (2 << 12) | (2 << 15);
+    set32(GPFSEL1, data);
     
-    ptr = (uint32_t*)GPPUD;
-    *ptr &= ~3;
+    data = get32(GPPUD);
+    data &= ~3;
+    set32(GPPUD, data);
     for (int i = 0; i < 150; i++)
         asm volatile("nop");
-    ptr = (uint32_t*)GPPUDCLK0;
-    *ptr = (1 << 14) | (1 << 15);
+    set32(GPPUDCLK0, (1 << 14) | (1 << 15));
     for (int i = 0; i < 150; i++)
         asm volatile("nop");
-    ptr = (uint32_t*)GPPUD;
-    *ptr = 0;
-    ptr = (uint32_t*)GPPUDCLK0;
-    *ptr = 0;
+    set32(GPPUD, 0);
+    set32(GPPUDCLK0, 0);
 
-    ptr = (uint32_t*)AUXENB;
-    *ptr = 1;
-    ptr = (uint32_t*)AUX_MU_CNTL_REG;
-    *ptr = 0;
-    ptr = (uint32_t*)AUX_MU_IER_REG;
-    *ptr = 0;
-    ptr = (uint32_t*)AUX_MU_LCR_REG;
-    *ptr = 3;
-    ptr = (uint32_t*)AUX_MU_MCR_REG;
-    *ptr = 0;
-    ptr = (uint32_t*)AUX_MU_BAUD_REG;
-    *ptr = 270;
-    ptr = (uint32_t*)AUX_MU_IIR_REG;
-    *ptr = 6;
-    ptr = (uint32_t*)AUX_MU_CNTL_REG;
-    *ptr = 3;
-
-    return;
+    set32(AUXENB, 1);
+    set32(AUX_MU_CNTL_REG, 0);
+    set32(AUX_MU_IER_REG, 0);
+    set32(AUX_MU_LCR_REG, 3);
+    set32(AUX_MU_MCR_REG, 0);
+    set32(AUX_MU_BAUD_REG, 270);
+    set32(AUX_MU_IIR_REG, 6);
+    set32(AUX_MU_CNTL_REG, 3);
 }
 
 int uart_write_char(char c)
 {
-    volatile uint32_t *lsr = (uint32_t*)AUX_MU_LSR_REG;
-    char *io = (char*)AUX_MU_IO_REG;
-
-    while (!(*lsr & (1 << 5))) ;
-    *io = c;
+    while (!(get32(AUX_MU_LSR_REG) & (1 << 5))) ;
+    set8(AUX_MU_IO_REG, c);
 
     return 0;
 }
@@ -83,15 +71,13 @@ int uart_write_hex(unsigned int num)
 
 int uart_read(char *str, unsigned int size)
 {
-    volatile uint32_t *lsr = (uint32_t*)AUX_MU_LSR_REG;
-    char *io = (char*)AUX_MU_IO_REG;
     int i;
     char c;
 
     for (i = 0; i < size - 1; i++)
     {
-        while (!(*lsr & 1)) ;
-        c = *io;
+        while (!(get32(AUX_MU_LSR_REG) & 1)) ;
+        c = get8(AUX_MU_IO_REG);
         
         if (c == 0x7f || c == 8) // backspace
         {

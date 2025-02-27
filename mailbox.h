@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define MMIO_BASE 0x3f000000
-#define MAILBOX_BASE (MMIO_BASE + 0xb880)
+#define MMIO_BASE (void*)0x3f000000
+#define MAILBOX_BASE (void*)(MMIO_BASE + 0xb880)
 
 #define MAILBOX_READ MAILBOX_BASE
 #define MAILBOX_STATUS (MAILBOX_BASE + 0x18)
@@ -21,10 +21,6 @@
 #define TAG_REQUEST_CODE 0x00000000
 #define END_TAG 0x00000000
 
-void mailbox_call(uint32_t *mailbox);
-void mailbox_request(int n_buf, uint32_t tag, uint32_t *data);
-void get_board_revision();
-void get_memory_info();
 void mailbox_info();
 
 #endif

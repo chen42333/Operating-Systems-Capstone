@@ -1,22 +1,18 @@
+#include "utils.h"
 #include "uart.h"
 #include "mailbox.h"
 
-void mailbox_call(uint32_t *mailbox)
+static void mailbox_call(uint32_t *mailbox)
 {
     uint32_t data = ((unsigned long)mailbox & ~0xf) | 8;
-    volatile uint32_t *ptr;
 
-    ptr = (uint32_t*)MAILBOX_STATUS;
-    while (*ptr & MAILBOX_FULL) ;
-    ptr = (uint32_t*)MAILBOX_WRITE;
-    *ptr = data;
-    ptr = (uint32_t*)MAILBOX_STATUS;
-    while (*ptr & MAILBOX_EMPTY) ;
-    ptr = (uint32_t*)MAILBOX_READ;
-    while (*ptr != data) ;
+    while (get32(MAILBOX_STATUS) & MAILBOX_FULL) ;
+    set32(MAILBOX_WRITE, data);
+    while (get32(MAILBOX_STATUS) & MAILBOX_EMPTY) ;
+    while (get32(MAILBOX_READ) != data) ;
 }
 
-void mailbox_request(int n_buf, uint32_t tag, uint32_t *data)
+static void mailbox_request(int n_buf, uint32_t tag, uint32_t *data)
 {
     int n = n_buf + 6;
     __attribute__((aligned(16))) uint32_t mailbox[n];
@@ -35,7 +31,7 @@ void mailbox_request(int n_buf, uint32_t tag, uint32_t *data)
         data[i] = mailbox[5 + i];
 }
 
-void get_board_revision()
+static void get_board_revision()
 {
     int n_buf = 1;
     uint32_t data[n_buf];
@@ -46,7 +42,7 @@ void get_board_revision()
     uart_write_string("\r\n");
 }
 
-void get_memory_info()
+static void get_memory_info()
 {
     int n_buf = 2;
     uint32_t data[n_buf];
