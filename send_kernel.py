@@ -30,7 +30,8 @@ tty.flush()
 tty.write(kernel_data)
 tty.flush()
 print("File sent")
-while True:
-    if tty.read(200).decode() == "":
-        print("File received")
-        break
+# while True:
+#     str = tty.read(64).decode()
+#     print(str, end='')
+#     if str.endswith("# "):
+#         tty.write((input() + '\r').encode())

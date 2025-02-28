@@ -54,3 +54,11 @@ uint32_t str2u32(char *str)
 
     return ret;
 }
+
+void memcpy(void *dst, void *src, uint32_t size)
+{
+    volatile char *d = dst, *s = src;
+
+    for (int i = 0; i < size; i++)
+        *d++ = *s++;
+}

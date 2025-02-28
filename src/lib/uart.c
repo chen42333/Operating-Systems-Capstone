@@ -110,7 +110,14 @@ int uart_read(char *str, unsigned int size, int mode)
             }
         }
     }
-    str[i] = '\0';
+
+    if (mode == RAW_MODE)
+    {
+        while (!(get32(AUX_MU_LSR_REG) & 1)) ;
+        str[i] = get8(AUX_MU_IO_REG);
+    }
+    else if (mode == STRING_MODE)
+        str[i] = '\0';
 
     return i;
 }

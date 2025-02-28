@@ -27,4 +27,5 @@ SECTIONS
   } > MEM
 
   _estack = 0x78000;
+  _skernel = 0x80000;
 }
