@@ -44,3 +44,13 @@ char get8(void *addr)
     volatile char *ptr = (char*)addr;
     return *ptr;
 }
+
+uint32_t str2u32(char *str)
+{
+    uint32_t ret = 0;
+
+    for (int i = 0; i < sizeof(uint32_t); i++)
+        ret += ((unsigned char)str[i] << (8 * i));
+
+    return ret;
+}

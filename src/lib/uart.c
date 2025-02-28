@@ -69,7 +69,7 @@ int uart_write_hex(unsigned int num)
     return 0;
 }
 
-int uart_read(char *str, unsigned int size)
+int uart_read(char *str, unsigned int size, int mode)
 {
     int i;
     char c;
@@ -79,30 +79,35 @@ int uart_read(char *str, unsigned int size)
         while (!(get32(AUX_MU_LSR_REG) & 1)) ;
         c = get8(AUX_MU_IO_REG);
         
-        if (c == 0x7f || c == 8) // backspace
-        {
-            if (i > 0)
-            {
-                i -= 2;
-                uart_write_string("\b \b");
-            }
-            else
-                i--;
-        }
-        else if (c == '\r')
-        {
-            uart_write_string("\r\n");
-            break;
-        }
-        else if (c == '\0' || c == '\n')
-        {
-            uart_write_char(c);
-            break;
-        } 
-        else
-        {
-            uart_write_char(c);
+        if (mode == RAW_MODE)
             str[i] = c;
+        else if (mode == STRING_MODE)
+        {
+            if (c == 0x7f || c == 8) // backspace
+            {
+                if (i > 0)
+                {
+                    i -= 2;
+                    uart_write_string("\b \b");
+                }
+                else
+                    i--;
+            }
+            else if (c == '\r')
+            {
+                uart_write_string("\r\n");
+                break;
+            }
+            else if (c == '\0' || c == '\n')
+            {
+                uart_write_char(c);
+                break;
+            } 
+            else
+            {
+                uart_write_char(c);
+                str[i] = c;
+            }
         }
     }
     str[i] = '\0';

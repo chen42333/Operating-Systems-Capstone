@@ -11,7 +11,7 @@ int main()
     while (true)
     {
         uart_write_string("# ");
-        uart_read(cmd, STRLEN);
+        uart_read(cmd, STRLEN, STRING_MODE);
         if (!strcmp("help", cmd))
             uart_write_string("help\t: print this help menu\r\n"
                     "hello\t: print Hello World!\r\n"

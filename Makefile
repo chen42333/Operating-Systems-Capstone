@@ -24,12 +24,14 @@ SRCS += $(shell find $(SRC_DIR)/$(LIB) -type f \( -name "*.c" -o -name "*.S" \))
 OBJS = $(SRCS:.c=.o)
 OBJS := $(OBJS:.S=.o)
 DEPS = $(OBJS:.o=.d)
-PROGS = *.elf *.img
 LDFILE = $(SRC_DIR)/$(TARGET)/linker.ld
+PROGS = *.elf *.img
+JUNK = $(shell find . -type f \( -name "*.o" -o -name "*.d" \))
+JUNK += $(PROGS)
 
 CFLAGS += -Iinclude/$(TARGET) -Iinclude/$(LIB)
 
-.PHONY = clean all test debug asm int
+.PHONY = clean all test debug asm int kernel bootloader
 
 .PRECIOUS: %.elf
 
@@ -54,8 +56,8 @@ int: $(TARGET_FILE)
 %.img: %.elf
 	$(OBJCPY) $(OBJCPYFLAGS) $< $@
 
-%.elf: $(OBJS)
-	$(LD) $(LDFLAGS) -T $(LDFILE) -o $@ $^
+%.elf: $(OBJS) $(LDFILE)
+	$(LD) $(LDFLAGS) -T $(LDFILE) -o $@ $(OBJS)
 
 -include $(DEPS)
 
@@ -66,4 +68,4 @@ int: $(TARGET_FILE)
 	$(CC) $(CFLAGS) -c $< -o $@
    
 clean:
-	rm -f $(OBJS) $(DEPS) $(PROGS)
+	rm -f $(JUNK)

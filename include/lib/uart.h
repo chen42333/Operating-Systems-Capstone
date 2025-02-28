@@ -15,10 +15,13 @@
 #define AUX_MU_LSR_REG (void*)0x3f215054
 #define AUX_MU_IO_REG (void*)0x3f215040
 
+#define STRING_MODE 0
+#define RAW_MODE 1
+
 void uart_init();
 int uart_write_char(char c);
 int uart_write_string(char *str);
 int uart_write_hex(unsigned int num);
-int uart_read(char *str, unsigned int size);
+int uart_read(char *str, unsigned int size, int mode);
 
 #endif
