@@ -13,7 +13,7 @@ void set32(void *addr, uint32_t value);
 uint32_t get32(void *addr);
 void set8(void *addr, char value);
 char get8(void *addr);
-uint32_t str2u32(char *str);
+uint32_t hstr2u32(char *str, int size);
 void memcpy(void *dst, void *src, uint32_t size);
 
 #endif

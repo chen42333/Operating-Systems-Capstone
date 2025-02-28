@@ -7,7 +7,7 @@ LDFLAGS = -m aarch64elf
 OBJCPY = llvm-objcopy
 OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 QEMU = qemu-system-aarch64
-QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -display none -serial null -serial stdio
+QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -display none -serial null -initrd $(RAMDISK)
 
 TARGET = kernel
 TARGET_FILE = kernel8.img
@@ -19,39 +19,51 @@ endif
 
 LIB = lib
 SRC_DIR = ./src
-SRCS = $(shell find $(SRC_DIR)/$(TARGET) -type f \( -name "*.c" -o -name "*.S" \))
+ENTRY = $(SRC_DIR)/$(TARGET)/start.S
+SRCS = $(ENTRY)
+SRCS += $(shell find $(SRC_DIR)/$(TARGET) -type f \( -name "*.c" -o -name "*.S" \) | grep -v $(ENTRY))
 SRCS += $(shell find $(SRC_DIR)/$(LIB) -type f \( -name "*.c" -o -name "*.S" \))
 OBJS = $(SRCS:.c=.o)
 OBJS := $(OBJS:.S=.o)
 DEPS = $(OBJS:.o=.d)
 LDFILE = $(SRC_DIR)/$(TARGET)/linker.ld
 PROGS = *.elf *.img
+RAMDISK_DIR = ./rootfs
+RAMDISK = initramfs.cpio
+RAMDISK_FILES = $(shell find $(RAMDISK_DIR))
 JUNK = $(shell find . -type f \( -name "*.o" -o -name "*.d" \))
 JUNK += $(PROGS)
+JUNK += $(RAMDISK)
 
 CFLAGS += -Iinclude/$(TARGET) -Iinclude/$(LIB)
 
-.PHONY = clean all test debug asm int kernel bootloader
+.PHONY = clean all kernel bootloader test debug test-pty test-asm test-int
 
 .PRECIOUS: %.elf
 
-all: $(TARGET_FILE)
+all: $(TARGET_FILE) $(RAMDISK)
 
-kernel: $(TARGET_FILE)
+kernel: $(TARGET_FILE) $(RAMDISK)
 
 bootloader: $(TARGET_FILE)
 
-test: $(TARGET_FILE)
-	$(QEMU) $(QEMUFLAGS)
+test: $(TARGET_FILE) $(RAMDISK)
+	$(QEMU) $(QEMUFLAGS) -serial stdio
 
-debug: $(TARGET_FILE)
-	$(QEMU) $(QEMUFLAGS) -S -s
+debug: $(TARGET_FILE) $(RAMDISK)
+	$(QEMU) $(QEMUFLAGS) -serial stdio -S -s
+
+test-pty: $(TARGET_FILE) $(RAMDISK)
+	$(QEMU) $(QEMUFLAGS) -serial pty
 	
-asm: $(TARGET_FILE)
-	$(QEMU) $(QEMUFLAGS) -d in_asm
+test-asm: $(TARGET_FILE) $(RAMDISK)
+	$(QEMU) $(QEMUFLAGS) -serial stdio -d in_asm
 
-int: $(TARGET_FILE)
-	$(QEMU) $(QEMUFLAGS) -d int
+test-int: $(TARGET_FILE) $(RAMDISK)
+	$(QEMU) $(QEMUFLAGS) -serial stdio -d int
+
+$(RAMDISK): $(RAMDISK_FILES)
+	cd $(RAMDISK_DIR) && find . | cpio -o -H newc > ../initramfs.cpio
 
 %.img: %.elf
 	$(OBJCPY) $(OBJCPYFLAGS) $< $@

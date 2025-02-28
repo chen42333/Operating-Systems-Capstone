@@ -52,7 +52,8 @@ Mkfile.old
 dkms.conf
 
 *.img
-shell
+rootfs/
+*.cpio
 .vscode/
 .DS_Store
 __MACOSX/

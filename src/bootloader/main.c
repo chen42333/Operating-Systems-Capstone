@@ -16,11 +16,11 @@ int main()
         uint32_t sum = 0;
 
         uart_read(buf, 4, RAW_MODE);
-        magic = str2u32(buf);
+        magic = *(uint32_t*)buf;
         uart_read(buf, 4, RAW_MODE);
-        data_len = str2u32(buf);
+        data_len = *(uint32_t*)buf;
         uart_read(buf, 4, RAW_MODE);
-        checksum = str2u32(buf);
+        checksum = *(uint32_t*)buf;
 
         char data[data_len];
         uart_read(data, data_len, RAW_MODE);
@@ -36,6 +36,12 @@ int main()
         {
             uart_write_string("File received\r\n");
             memcpy((void*)&_skernel, (void*)data, data_len);
+            uart_write_hex(magic);
+            uart_write_char('\n');
+            uart_write_hex(data_len);
+            uart_write_char('\n');
+            uart_write_hex(checksum);
+            uart_write_char('\n');
             asm volatile ("b _skernel");
             break;
         }

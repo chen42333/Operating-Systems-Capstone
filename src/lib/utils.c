@@ -45,12 +45,22 @@ char get8(void *addr)
     return *ptr;
 }
 
-uint32_t str2u32(char *str)
+uint32_t hstr2u32(char *hstr, int size)
 {
     uint32_t ret = 0;
 
-    for (int i = 0; i < sizeof(uint32_t); i++)
-        ret += ((unsigned char)str[i] << (8 * i));
+    for (int i = 0; i < size; i++)    
+    {
+        if (hstr[i] >= '0' && hstr[i] <= '9')
+            ret += (hstr[i] - '0');
+        else if (hstr[i] >= 'A' && hstr[i] <= 'F')
+            ret += (hstr[i] - 'A' + 10);
+        else if (hstr[i] >= 'a' && hstr[i] <= 'f')
+            ret += (hstr[i] - 'a' + 10);
+
+        if (i < size - 1)
+            ret <<= 4;
+    }
 
     return ret;
 }

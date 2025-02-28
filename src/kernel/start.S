@@ -5,6 +5,7 @@
 .global var
 var: .skip 8 
 
+
 .section .text
 .global _start
 
