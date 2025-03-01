@@ -4,7 +4,7 @@
 #include "boot.h"
 #include "ramdisk.h"
 
-void heap_test()
+void mem_alloc()
 {
     char sz[STRLEN];
     void *data;
@@ -48,8 +48,8 @@ int main()
             ls();
         else if (!strcmp("cat", cmd))
             cat();
-        else if (!strcmp("alloc", cmd))
-            heap_test();
+        else if (!strcmp("memAlloc", cmd))
+            mem_alloc();
         else
             uart_write_string("Invalid command\r\n");
     }
