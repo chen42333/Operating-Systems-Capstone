@@ -9,12 +9,15 @@ OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 QEMU = qemu-system-aarch64
 QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -display none -serial null -initrd $(RAMDISK)
 
+KERNEL_TARGET = kernel8.img
+BOOTLOADER_TARGET = bootloader.img
+
 TARGET = kernel
-TARGET_FILE = kernel8.img
+TARGET_FILE = $(KERNEL_TARGET)
 
 ifeq ($(MAKECMDGOALS),bootloader)
 	TARGET = bootloader
-	TARGET_FILE = bootloader.img
+	TARGET_FILE = $(BOOTLOADER_TARGET)
 endif
 
 LIB = lib
@@ -35,7 +38,10 @@ JUNK += $(RAMDISK)
 
 CFLAGS += -Iinclude/$(TARGET) -Iinclude/$(LIB)
 
-.PHONY = clean all kernel bootloader test debug test-pty test-asm test-int
+CONFIG = config.txt
+JUNK += $(CONFIG)
+
+.PHONY = clean all kernel bootloader test debug test-pty test-asm test-int config-file
 
 .PRECIOUS: %.elf
 
@@ -61,7 +67,7 @@ test-int: $(TARGET_FILE) $(RAMDISK)
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d int
 
 $(RAMDISK): $(RAMDISK_FILES)
-	cd $(RAMDISK_DIR) && find . | cpio -o -H newc > ../initramfs.cpio
+	cd $(RAMDISK_DIR) && find . | cpio -o -H newc > ../$@
 
 %.img: %.elf
 	$(OBJCPY) $(OBJCPYFLAGS) $< $@
@@ -76,6 +82,12 @@ $(RAMDISK): $(RAMDISK_FILES)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+config-file:
+	echo "kernel_address=0x60000" > $(CONFIG)
+	echo "kernel=$(BOOTLOADER_TARGET)" >> $(CONFIG)
+	echo "arm_64bit=1" >> $(CONFIG)
+	echo "initramfs $(RAMDISK) 0x8000000" >> $(CONFIG)
    
 clean:
 	rm -f $(JUNK)
