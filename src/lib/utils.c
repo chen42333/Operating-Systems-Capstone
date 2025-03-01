@@ -1,6 +1,8 @@
 #include "utils.h"
 #include "uart.h"
 
+void *heap_ptr = &_ebss;
+
 void err(char *str)
 {
     uart_write_string("Error:\t");
@@ -45,6 +47,13 @@ char get8(void *addr)
     return *ptr;
 }
 
+unsigned int strlen(char* str)
+{
+    unsigned int i;
+    for (i = 0; str[i] != '\0'; i++) ;
+    return i;
+}
+
 uint32_t hstr2u32(char *hstr, int size)
 {
     uint32_t ret = 0;
@@ -71,4 +80,18 @@ void memcpy(void *dst, void *src, uint32_t size)
 
     for (int i = 0; i < size; i++)
         *d++ = *s++;
+}
+
+void* simple_malloc(size_t size)
+{
+    void *ret = heap_ptr;
+    if (heap_ptr + size <= (size_t)&_ebss + HEAP_SIZE)
+    {
+        heap_ptr += size;
+        return ret;
+    }
+
+    uart_write_string("Allocation failed\r\n");
+    
+    return NULL;
 }

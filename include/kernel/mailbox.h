@@ -1,8 +1,6 @@
 #ifndef __MAILBOX_H
 #define __MAILBOX_H
 
-#include <stdint.h>
-
 #define MMIO_BASE (void*)0x3f000000
 #define MAILBOX_BASE (void*)(MMIO_BASE + 0xb880)
 

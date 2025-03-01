@@ -1,6 +1,6 @@
 .equ WORD_SIZE, 8
 
-.section .text
+.section .text._start
 .global _start
 
 _start:

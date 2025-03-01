@@ -7,6 +7,7 @@ SECTIONS
 {
   .text : { 
     _stext = .;
+    KEEP(*(.text._start))
     *(.text)
     _etext = .;
   } > MEM

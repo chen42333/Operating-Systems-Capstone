@@ -19,9 +19,7 @@ endif
 
 LIB = lib
 SRC_DIR = ./src
-ENTRY = $(SRC_DIR)/$(TARGET)/start.S
-SRCS = $(ENTRY)
-SRCS += $(shell find $(SRC_DIR)/$(TARGET) -type f \( -name "*.c" -o -name "*.S" \) | grep -v $(ENTRY))
+SRCS = $(shell find $(SRC_DIR)/$(TARGET) -type f \( -name "*.c" -o -name "*.S" \))
 SRCS += $(shell find $(SRC_DIR)/$(LIB) -type f \( -name "*.c" -o -name "*.S" \))
 OBJS = $(SRCS:.c=.o)
 OBJS := $(OBJS:.S=.o)
