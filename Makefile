@@ -84,7 +84,6 @@ $(RAMDISK): $(RAMDISK_FILES)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 config-file:
-	echo "kernel_address=0x60000" > $(CONFIG)
 	echo "kernel=$(BOOTLOADER_TARGET)" >> $(CONFIG)
 	echo "arm_64bit=1" >> $(CONFIG)
 	echo "initramfs $(RAMDISK) 0x8000000" >> $(CONFIG)
