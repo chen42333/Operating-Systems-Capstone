@@ -10,6 +10,15 @@ var: .skip 8
 .global _start
 
 _start:
+  mrs x0, MPIDR_EL1
+  and x0, x0, #0xff
+  cbz x0, _core_0
+
+_other_cores:
+  wfe
+  b _other_cores
+  
+_core_0:
   // Initialize .bss
   adr x0, _sbss
   adr x1, _ebss
