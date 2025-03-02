@@ -38,10 +38,7 @@ JUNK += $(RAMDISK)
 
 CFLAGS += -Iinclude/$(TARGET) -Iinclude/$(LIB)
 
-CONFIG = config.txt
-JUNK += $(CONFIG)
-
-.PHONY = clean all kernel bootloader test debug test-pty test-asm test-int config-file
+.PHONY = clean all kernel bootloader test debug test-pty test-asm test-int
 
 .PRECIOUS: %.elf
 
@@ -82,11 +79,6 @@ $(RAMDISK): $(RAMDISK_FILES)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
-config-file:
-	echo "kernel=$(BOOTLOADER_TARGET)" >> $(CONFIG)
-	echo "arm_64bit=1" >> $(CONFIG)
-	echo "initramfs $(RAMDISK) 0x8000000" >> $(CONFIG)
    
 clean:
 	rm -f $(JUNK)
