@@ -1,7 +1,7 @@
 #include "utils.h"
 #include "uart.h"
 
-void *heap_ptr = &_ebss;
+void *heap_ptr = _ebss;
 
 void err(char *str)
 {
@@ -85,7 +85,7 @@ void memcpy(void *dst, void *src, uint32_t size)
 void* simple_malloc(size_t size)
 {
     void *ret = heap_ptr;
-    if (heap_ptr + size <= (size_t)&_ebss + HEAP_SIZE)
+    if ((size_t)heap_ptr + size <= (size_t)&_ebss + HEAP_SIZE)
     {
         heap_ptr += size;
         return ret;

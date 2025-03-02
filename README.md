@@ -17,3 +17,7 @@ make config-file
 ```
 python3 send_kernel.py <tty-dev-path>
 ```
+7. Interact with Rpi3
+```
+minicom -D <tty-dev-path> -b 115200 -o
+``` 

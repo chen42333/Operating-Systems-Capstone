@@ -11,7 +11,15 @@
 
 typedef uint64_t size_t; 
 
+extern char _stext[];
+extern char _etext[];
+extern char _srodata[];
+extern char _erodata[];
+extern char _sdata[];
+extern char _edata[];
+extern char _sbss[];
 extern char _ebss[];
+extern char _estack[];
 
 void err(char *str);
 int strcmp(const char *str1, const char *str2);

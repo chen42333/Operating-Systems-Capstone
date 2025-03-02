@@ -3,7 +3,7 @@
 
 #define MAGIC 0x544f4f42
 
-extern char _skernel[];
+extern void* _skernel;
 
 int main()
 {
@@ -35,14 +35,10 @@ int main()
         else
         {
             uart_write_string("File received\r\n");
-            memcpy((void*)&_skernel, (void*)data, data_len);
-            uart_write_hex(magic);
-            uart_write_char('\n');
-            uart_write_hex(data_len);
-            uart_write_char('\n');
-            uart_write_hex(checksum);
-            uart_write_char('\n');
-            asm volatile ("b _skernel");
+            memcpy((void*)_skernel, (void*)data, data_len);
+            asm volatile ("adr x28, _skernel");
+            asm volatile ("ldr x28, [x28]");
+            asm volatile ("br x28");
             break;
         }
     }

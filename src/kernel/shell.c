@@ -16,7 +16,7 @@ void mem_alloc()
     if (data != NULL)
     {
         uart_write_string("Allocator test: The data allocated from the heap is: ");
-        uart_write_hex((unsigned int)data);
+        uart_write_hex((uintptr_t)data);
         uart_write_string("\r\n");
     }
 }
@@ -26,6 +26,7 @@ int main()
     char cmd[STRLEN];
 
     uart_init();
+
     while (true)
     {
         uart_write_string("# ");
@@ -37,7 +38,7 @@ int main()
                     "reboot\t: reboot the device\r\n"
                     "ls\t: list all the files in ramdisk\r\n"
                     "cat\t: show the content of file1\r\n"
-                    "alloc\t: allocate data from the heap\r\n");
+                    "memAlloc\t: allocate data from the heap\r\n");
         else if (!strcmp("hello", cmd))
             uart_write_string("Hello World!\r\n");
         else if (!strcmp("mailbox", cmd))
