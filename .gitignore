@@ -52,7 +52,6 @@ Mkfile.old
 dkms.conf
 
 *.img
-rootfs/
 *.cpio
 .vscode/
 .DS_Store
