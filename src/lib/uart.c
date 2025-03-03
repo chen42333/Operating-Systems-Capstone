@@ -47,14 +47,14 @@ int uart_write_string(char *str)
     return 0;
 }
 
-int uart_write_hex(unsigned int num)
+int uart_write_hex(uint32_t num)
 {
-    char buf[sizeof(unsigned int) * 2 + 1];
+    char buf[sizeof(uint32_t) * 2 + 1];
 
     uart_write_string("0x");
-    for (int i = sizeof(unsigned int) * 2 - 1; i >= 0 ; i--)
+    for (int i = sizeof(uint32_t) * 2 - 1; i >= 0 ; i--)
     {
-        unsigned int byte = num % 16;
+        uint32_t byte = num % 16;
         if (byte < 10)
             buf[i] = byte + '0';
         else
@@ -62,13 +62,13 @@ int uart_write_hex(unsigned int num)
         num >>= 4;
     }
     
-    buf[sizeof(unsigned int) * 2] = '\0';
+    buf[sizeof(uint32_t) * 2] = '\0';
     uart_write_string(buf);
 
     return 0;
 }
 
-int uart_read(char *str, unsigned int size, int mode)
+int uart_read(char *str, uint32_t size, int mode)
 {
     int i;
     char c;

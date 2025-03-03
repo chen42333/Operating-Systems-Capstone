@@ -1,6 +1,8 @@
 #ifndef __UART_H
 #define __UART_H
 
+#include <stdint.h>
+
 #define GPFSEL1 (void*)0x3f200004
 #define GPPUD (void*)0x3f200094
 #define GPPUDCLK0 (void*)0x3f200098
@@ -21,7 +23,7 @@
 void uart_init();
 int uart_write_char(char c);
 int uart_write_string(char *str);
-int uart_write_hex(unsigned int num);
-int uart_read(char *str, unsigned int size, int mode);
+int uart_write_hex(uint32_t num);
+int uart_read(char *str, uint32_t size, int mode);
 
 #endif

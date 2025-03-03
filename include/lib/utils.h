@@ -27,7 +27,7 @@ void set32(void *addr, uint32_t value);
 uint32_t get32(void *addr);
 void set8(void *addr, char value);
 char get8(void *addr);
-unsigned int strlen(char* str);
+uint32_t strlen(char* str);
 uint32_t hstr2u32(char *str, int size);
 void memcpy(void *dst, void *src, uint32_t size);
 void* simple_malloc(size_t size);

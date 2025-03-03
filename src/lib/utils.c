@@ -47,9 +47,9 @@ char get8(void *addr)
     return *ptr;
 }
 
-unsigned int strlen(char* str)
+uint32_t strlen(char* str)
 {
-    unsigned int i;
+    uint32_t i;
     for (i = 0; str[i] != '\0'; i++) ;
     return i;
 }

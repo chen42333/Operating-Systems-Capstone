@@ -3,7 +3,7 @@
 
 #define MAGIC 0x544f4f42
 
-extern void* _skernel;
+extern char _skernel[];
 
 int main()
 {
@@ -36,9 +36,7 @@ int main()
         {
             uart_write_string("File received\r\n");
             memcpy((void*)_skernel, (void*)data, data_len);
-            asm volatile ("adr x28, _skernel");
-            asm volatile ("ldr x28, [x28]");
-            asm volatile ("br x28");
+            asm volatile ("b _skernel");
             break;
         }
     }

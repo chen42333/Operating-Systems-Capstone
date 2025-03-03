@@ -2,9 +2,7 @@
 
 .section .data
 .align 3
-.global _skernel
-_target_addr: .quad 0x60000   
-_skernel: .quad 0x80000 
+_target_addr: .quad 0x60000
 _reloc: .word 0
 
 .section .text._start
