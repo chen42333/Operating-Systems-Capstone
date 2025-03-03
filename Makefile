@@ -13,10 +13,12 @@ KERNEL_TARGET = kernel8.img
 BOOTLOADER_TARGET = bootloader.img
 
 TARGET = kernel
-TARGET_FILE = $(KERNEL_TARGET)
-
 ifeq ($(MAKECMDGOALS),bootloader)
 	TARGET = bootloader
+endif
+
+TARGET_FILE = $(KERNEL_TARGET)
+ifeq ($(TARGET),bootloader)
 	TARGET_FILE = $(BOOTLOADER_TARGET)
 endif
 
