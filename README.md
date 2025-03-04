@@ -1,4 +1,7 @@
 # Operating-Systems-Capstone
+## Prerequisite
+OS: MacOS
+```brew install llvm qemu python3 pyserial```
 ## Running on RPI3
 1. Build kernel
 ```
@@ -40,7 +43,7 @@ make test TARGET=<target> _QEMUFLAGS=<additional flags>
 - `<target>`: `bootloader` or `kernel`
 4. Test with LLDB/GDB (optional)
 ```
-make debug TARGET=<target> _QEMUFLAGS=<additional flags>
+make debug _QEMUFLAGS=<additional flags> TARGET=<target> 
 ```
 - GDB
 ```

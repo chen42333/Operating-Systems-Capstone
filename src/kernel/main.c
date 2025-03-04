@@ -43,7 +43,7 @@ int main()
                     "reboot\t: reboot the device\r\n"
                     "ls\t: list all the files in ramdisk\r\n"
                     "cat\t: show the content of file1\r\n"
-                    "memAlloc\t: allocate data from the heap\r\n");
+                    "memAlloc: allocate data from the heap\r\n");
         else if (!strcmp("hello", cmd))
             uart_write_string("Hello World!\r\n");
         else if (!strcmp("mailbox", cmd))
