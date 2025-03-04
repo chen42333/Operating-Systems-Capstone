@@ -1,6 +1,7 @@
 # Operating-Systems-Capstone
 ## Prerequisite
 OS: MacOS
+
 ```brew install llvm qemu python3 pyserial```
 ## Running on RPI3
 1. Build kernel
