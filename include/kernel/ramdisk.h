@@ -1,7 +1,7 @@
 #ifndef __RAMDISK_H
 #define __RAMDISK_H
 
-#define RAMDISK_ADDR 0x8000000
+#define INITRD_NODE_PATH "/chosen/linux,initrd-start"
 
 struct cpio_newc_header {
     char    c_magic[6];
@@ -28,5 +28,6 @@ struct cpio_record
 
 void ls();
 void cat();
+int initramfs_callback(void *p, char *name);
 
 #endif

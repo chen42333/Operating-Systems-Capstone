@@ -3,6 +3,9 @@
 #include "mailbox.h"
 #include "boot.h"
 #include "ramdisk.h"
+#include "device_tree.h"
+
+extern void *dtb_addr;
 
 void mem_alloc()
 {
@@ -25,6 +28,8 @@ int main()
 {
     char cmd[STRLEN];
 
+    asm volatile ("mov %0, x28" : "=r"(dtb_addr));
+    fdt_traverse(initramfs_callback);
     uart_init();
 
     while (true)

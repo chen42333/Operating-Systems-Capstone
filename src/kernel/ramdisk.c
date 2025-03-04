@@ -1,10 +1,14 @@
 #include "ramdisk.h"
 #include "uart.h"
 #include "utils.h"
+#include "device_tree.h"
+
+void *ramdisk_addr;
+int idx = 0;
 
 void ls()
 {
-    void *addr = (void*)RAMDISK_ADDR;
+    void *addr = ramdisk_addr;
     while (true)
     {
         struct cpio_record *record = (struct cpio_record*)addr;
@@ -27,7 +31,7 @@ void ls()
 
 void cat()
 {
-    void *addr = (void*)RAMDISK_ADDR;
+    void *addr = ramdisk_addr;
     while (true)
     {
         struct cpio_record *record = (struct cpio_record*)addr;
@@ -53,4 +57,47 @@ void cat()
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
         addr += ((file_size + 3) & ~3);
     }
+}
+
+int initramfs_callback(void *p, char *name)
+{
+    struct fdt_node_comp *ptr = (struct fdt_node_comp*)p;
+    int i;
+    int last = false;
+    char path[] = INITRD_NODE_PATH;
+
+    if (big2host(ptr->token) == FDT_END)
+    {
+        idx = 0;
+        return false;
+    }
+    else if (big2host(ptr->token) != FDT_BEGIN_NODE && big2host(ptr->token) != FDT_PROP)
+        return false;
+
+    if (idx == 0 && path[idx] == '/')
+        idx++;
+    
+    for (i = idx; path[i] != '/'; i++)
+    {
+        if (path[i] == '\0')
+        {
+            last = true;
+            break;
+        }
+    }
+    path[i] = '\0';
+
+    if (!strcmp(&path[idx], name))
+    {
+        idx = i + 1;
+        if (last)
+        {
+            uint32_t value = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop)));
+            ramdisk_addr = (void*)(uintptr_t)value;
+            idx = 0;
+            return true;
+        }
+    }
+
+    return false;
 }

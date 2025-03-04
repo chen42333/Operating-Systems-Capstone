@@ -7,7 +7,9 @@ LDFLAGS = -m aarch64elf
 OBJCPY = llvm-objcopy
 OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 QEMU = qemu-system-aarch64
-QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -display none -serial null -initrd $(RAMDISK)
+QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -display none -serial null -initrd $(RAMDISK) -dtb $(DEVICE_TREE)
+_QEMUFLAGS = 
+QEMUFLAGS += $(_QEMUFLAGS)
 
 KERNEL_TARGET = kernel8.img
 BOOTLOADER_TARGET = bootloader.img
@@ -34,6 +36,7 @@ PROGS = *.elf *.img
 RAMDISK_DIR = ./rootfs
 RAMDISK = initramfs.cpio
 RAMDISK_FILES = $(shell find $(RAMDISK_DIR))
+DEVICE_TREE = bcm2710-rpi-3-b-plus.dtb
 JUNK = $(shell find . -type f \( -name "*.o" -o -name "*.d" \))
 JUNK += $(PROGS)
 JUNK += $(RAMDISK)
@@ -43,8 +46,6 @@ CFLAGS += -Iinclude/$(TARGET) -Iinclude/$(LIB)
 .PHONY = clean all kernel bootloader test debug test-pty test-asm test-int
 
 .PRECIOUS: %.elf
-
-all: $(TARGET_FILE) $(RAMDISK)
 
 kernel: $(TARGET_FILE) $(RAMDISK)
 
