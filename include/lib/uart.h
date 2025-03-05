@@ -23,7 +23,12 @@
 void uart_init();
 int uart_write_char(char c);
 int uart_write_string(char *str);
-int uart_write_hex(uint32_t num);
+int uart_write_hex(uint64_t num, uint32_t size);
 int uart_read(char *str, uint32_t size, int mode);
+
+inline static int uart_write_newline()
+{
+    return uart_write_string("\r\n");
+}
 
 #endif

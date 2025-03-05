@@ -6,6 +6,25 @@
 #include "device_tree.h"
 
 extern void *dtb_addr;
+extern void exec_prog();
+
+void exception_entry()
+{
+    uint64_t value;
+
+    asm volatile ("mrs %0, spsr_el1" : "=r"(value));
+    uart_write_string("SPSR_EL1: ");
+    uart_write_hex(value, sizeof(uint64_t));
+    uart_write_string("\r\n");
+    asm volatile ("mrs %0, elr_el1" : "=r"(value));
+    uart_write_string("ELR_EL1: ");
+    uart_write_hex(value, sizeof(uint64_t));
+    uart_write_string("\r\n");
+    asm volatile ("mrs %0, esr_el1" : "=r"(value));
+    uart_write_string("ESR_EL1: ");
+    uart_write_hex(value, sizeof(uint64_t));
+    uart_write_string("\r\n");
+}
 
 void mem_alloc()
 {
@@ -19,7 +38,7 @@ void mem_alloc()
     if (data != NULL)
     {
         uart_write_string("Allocator test: The data allocated from the heap is: ");
-        uart_write_hex((uintptr_t)data);
+        uart_write_hex((uintptr_t)data, sizeof(uint64_t));
         uart_write_string("\r\n");
     }
 }
@@ -43,7 +62,8 @@ int main()
                     "reboot\t: reboot the device\r\n"
                     "ls\t: list all the files in ramdisk\r\n"
                     "cat\t: show the content of file1\r\n"
-                    "memAlloc: allocate data from the heap\r\n");
+                    "memAlloc: allocate data from the heap\r\n"
+                    "ldProg\t: execute the specified program in the ramdisk\r\n");
         else if (!strcmp("hello", cmd))
             uart_write_string("Hello World!\r\n");
         else if (!strcmp("mailbox", cmd))
@@ -56,6 +76,11 @@ int main()
             cat();
         else if (!strcmp("memAlloc", cmd))
             mem_alloc();
+        else if (!strcmp("ldProg", cmd))
+        {
+            load_prog();
+            exec_prog();
+        }
         else
             uart_write_string("Invalid command\r\n");
     }

@@ -1,7 +1,7 @@
-ENTRY(_start)
+ENTRY(main)
 MEMORY
 {
-  MEM(rwx) : ORIGIN = 0x80000, LENGTH = 128K
+  MEM(rwx) : ORIGIN = 0x110000, LENGTH = 128K
 }
 SECTIONS
 {
@@ -27,7 +27,5 @@ SECTIONS
     _ebss = .;
   } > MEM
 
-  _estack = 0x100000;
-  _sprog = 0x110000;
-  _eprog_stack = 0x180000;
+  _estack = 0x180000;
 }

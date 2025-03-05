@@ -5,11 +5,12 @@
 .global var
 var: .skip 8 
 
-
 .section .text._start
-.global _start
+.global _start, exec_prog
 
 _start:
+  bl from_el2_to_el1
+  bl set_exception_vector_table
   mrs x0, MPIDR_EL1
   and x0, x0, #0xff
   cbz x0, _core_0
@@ -35,3 +36,11 @@ _end_loop1:
   mov sp, x0
   b main
   
+exec_prog:
+  mov x0, 0x3c0 
+  msr spsr_el1, x0
+  adr x0, _sprog
+  msr elr_el1, x0
+  adr x0, _eprog_stack
+  msr sp_el0, x0
+  eret

@@ -101,3 +101,30 @@ int initramfs_callback(void *p, char *name)
 
     return false;
 }
+
+void load_prog()
+{
+    void *addr = ramdisk_addr;
+    while (true)
+    {
+        struct cpio_record *record = (struct cpio_record*)addr;
+        uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
+        uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
+
+        if (!strcmp("TRAILER!!!", record->payload))
+            break;
+
+        if (!strcmp("./simple.img", record->payload))
+        {
+            int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
+
+            for (int i = 0; i < file_size; i++)
+                *(_sprog + i) = *(record->payload + offset + i);
+
+            break;
+        }
+
+        addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
+        addr += ((file_size + 3) & ~3);
+    }
+}

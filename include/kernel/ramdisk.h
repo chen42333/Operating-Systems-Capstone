@@ -29,5 +29,6 @@ struct cpio_record
 void ls();
 void cat();
 int initramfs_callback(void *p, char *name);
+void load_prog();
 
 #endif

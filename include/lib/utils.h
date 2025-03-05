@@ -22,6 +22,7 @@ extern char _edata[];
 extern char _sbss[];
 extern char _ebss[];
 extern char _estack[];
+extern char _sprog[];
 
 int strcmp(const char *str1, const char *str2);
 uint32_t hstr2u32(char *str, int size);

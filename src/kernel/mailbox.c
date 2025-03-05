@@ -38,7 +38,7 @@ static void get_board_revision()
     mailbox_request(n_buf, GET_BOARD_REVISION, data);
 
     uart_write_string("Board revision: ");
-    uart_write_hex(data[0]);
+    uart_write_hex(data[0], sizeof(uint32_t));
     uart_write_string("\r\n");
 }
 
@@ -49,10 +49,10 @@ static void get_memory_info()
     mailbox_request(2, GET_ARM_MEMORY, data);
 
     uart_write_string("ARM memory base address: ");
-    uart_write_hex(data[0]);
+    uart_write_hex(data[0], sizeof(uint32_t));
     uart_write_string("\r\n");
     uart_write_string("ARM memory size: ");
-    uart_write_hex(data[1]);
+    uart_write_hex(data[1], sizeof(uint32_t));
     uart_write_string("\r\n");
 }
 

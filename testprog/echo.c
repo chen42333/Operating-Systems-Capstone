@@ -1,34 +1,34 @@
 #include "utils.h"
 #include "uart.h"
 
-void uart_init()
+int main()
 {
-    uint32_t data;
-    // Set GPIO 14, 15 to ALT5
-    data = get32(GPFSEL1);
-    data &= ~((7 << 12) | (7 << 15));
-    data |= (2 << 12) | (2 << 15);
-    set32(GPFSEL1, data);
-    
-    data = get32(GPPUD);
-    data &= ~3;
-    set32(GPPUD, data);
-    for (int i = 0; i < 150; i++)
-        asm volatile("nop");
-    set32(GPPUDCLK0, (1 << 14) | (1 << 15));
-    for (int i = 0; i < 150; i++)
-        asm volatile("nop");
-    set32(GPPUD, 0);
-    set32(GPPUDCLK0, 0);
+    char cmd[STRLEN];
+    char *quit_cmd[] = {"quit", "q", "exit"};
+    int size = sizeof(quit_cmd) / sizeof(quit_cmd[0]);
+    bool quit = false;
 
-    set32(AUXENB, 1);
-    set32(AUX_MU_CNTL_REG, 0);
-    set32(AUX_MU_IER_REG, 0);
-    set32(AUX_MU_LCR_REG, 3);
-    set32(AUX_MU_MCR_REG, 0);
-    set32(AUX_MU_BAUD_REG, 270);
-    set32(AUX_MU_IIR_REG, 6);
-    set32(AUX_MU_CNTL_REG, 3);
+    while (!quit)
+    {
+
+        uart_read(cmd, STRLEN, STRING_MODE);
+
+        for (int i = 0; i < size; i++)
+        {
+            if (!strcmp(quit_cmd[i], cmd))
+            {
+                quit = true;
+                break;
+            }
+        }
+
+        if (!quit)
+        {
+            uart_write_string(cmd);
+            uart_write_string("\r\n");
+        }
+    }
+    return 0;
 }
 
 int uart_write_char(char c)
@@ -43,27 +43,6 @@ int uart_write_string(char *str)
 {
     for (int i = 0; str[i] != '\0'; i++)
        uart_write_char(str[i]);
-
-    return 0;
-}
-
-int uart_write_hex(uint64_t num, uint32_t size)
-{
-    char buf[size * 2 + 1];
-
-    uart_write_string("0x");
-    for (int i = size * 2 - 1; i >= 0 ; i--)
-    {
-        uint64_t byte = num % 16;
-        if (byte < 10)
-            buf[i] = byte + '0';
-        else
-            buf[i] = byte - 10 + 'a';
-        num >>= 4;
-    }
-    
-    buf[size * 2] = '\0';
-    uart_write_string(buf);
 
     return 0;
 }
@@ -119,4 +98,19 @@ int uart_read(char *str, uint32_t size, int mode)
         str[i] = '\0';
 
     return i;
+}
+
+int strcmp(const char *str1, const char *str2)
+{
+    for (int i = 0; ; i++)
+    {
+
+        if (str1[i] < str2[i])
+            return -1;
+        if (str1[i] > str2[i])
+            return 1;
+        if (str1[i] == '\0' && str2[i] == '\0')
+            break;
+    }
+    return 0;
 }

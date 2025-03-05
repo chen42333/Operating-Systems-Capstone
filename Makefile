@@ -25,6 +25,7 @@ ifeq ($(TARGET),bootloader)
 endif
 
 LIB = lib
+TEST_PROG_DIR = testprog
 SRC_DIR = ./src
 SRCS = $(shell find $(SRC_DIR)/$(TARGET) -type f \( -name "*.c" -o -name "*.S" \))
 SRCS += $(shell find $(SRC_DIR)/$(LIB) -type f \( -name "*.c" -o -name "*.S" \))
@@ -33,11 +34,18 @@ OBJS := $(OBJS:.S=.o)
 DEPS = $(OBJS:.o=.d)
 LDFILE = $(SRC_DIR)/$(TARGET)/linker.ld
 PROGS = *.elf *.img
+PROGS += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
+PROGS += $(shell find $(RAMDISK_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
 RAMDISK_DIR = ./rootfs
 RAMDISK = initramfs.cpio
-RAMDISK_FILES = $(shell find $(RAMDISK_DIR))
+RAMDISK_FILES = $(shell find $(RAMDISK_DIR) -type f ! -name "*.img" )
+TEST_PROG_NAME = simple# should modify load_prog() in src/kernel/ramdisk.c also
+TEST_PROG = $(TEST_PROG_DIR)/$(TEST_PROG_NAME)
+TEST_PROG_SRCS = $(shell find $(TEST_PROG_DIR) -type f \( -name "*.c" -o -name "*.S" \) | grep $(TEST_PROG_NAME))
+TEST_PROG_LDFILE = $(TEST_PROG_DIR)/linker.ld
 DEVICE_TREE = bcm2710-rpi-3-b-plus.dtb
 JUNK = $(shell find . -type f \( -name "*.o" -o -name "*.d" \))
+JUNK += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.o" -o -name "*.d" \))
 JUNK += $(PROGS)
 JUNK += $(RAMDISK)
 
@@ -66,8 +74,14 @@ test-asm: $(TARGET_FILE) $(RAMDISK)
 test-int: $(TARGET_FILE) $(RAMDISK)
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d int
 
-$(RAMDISK): $(RAMDISK_FILES)
+$(RAMDISK): $(RAMDISK_FILES) $(TEST_PROG).img
 	cd $(RAMDISK_DIR) && find . | cpio -o -H newc > ../$@
+
+$(TEST_PROG).img: $(TEST_PROG_SRCS)
+	$(CC) $(CFLAGS) -c $< -o $(TEST_PROG).o
+	$(LD) $(LDFLAGS) -T $(TEST_PROG_LDFILE) -o $(TEST_PROG).elf $(TEST_PROG).o
+	$(OBJCPY) $(OBJCPYFLAGS) $(TEST_PROG).elf $@
+	cp $@ $(RAMDISK_DIR)
 
 %.img: %.elf
 	$(OBJCPY) $(OBJCPYFLAGS) $< $@
