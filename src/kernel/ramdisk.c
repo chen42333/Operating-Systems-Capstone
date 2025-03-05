@@ -63,7 +63,7 @@ int initramfs_callback(void *p, char *name)
 {
     struct fdt_node_comp *ptr = (struct fdt_node_comp*)p;
     int i;
-    int last = false;
+    bool last = false;
     char path[] = INITRD_NODE_PATH;
 
     if (big2host(ptr->token) == FDT_END)

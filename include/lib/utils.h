@@ -11,6 +11,7 @@
 #define HEAP_SIZE 0x20000
 
 typedef uint64_t size_t; 
+typedef int bool;
 
 extern char _stext[];
 extern char _etext[];

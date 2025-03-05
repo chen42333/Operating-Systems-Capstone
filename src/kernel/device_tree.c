@@ -7,8 +7,8 @@ void fdt_traverse(int (*func)(void*, char*))
 {
     struct fdt_header *hdr = (struct fdt_header*)dtb_addr;
     void *p;
-    int found = false;
-    int end = false;
+    bool found = false;
+    bool end = false;
     
     if (big2host(hdr->magic) != 0xd00dfeed)
         err("Invalid .dtb file\r\n");
