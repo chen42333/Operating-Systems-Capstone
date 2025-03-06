@@ -20,6 +20,7 @@ _other_cores:
   b _other_cores
   
 _core_0:
+  bl core_timer_enable
   // Initialize .bss
   adr x0, _sbss
   adr x1, _ebss
@@ -37,7 +38,7 @@ _end_loop1:
   b main
   
 exec_prog:
-  mov x0, 0x3c0 
+  mov x0, 0 
   msr spsr_el1, x0
   adr x0, _sprog
   msr elr_el1, x0

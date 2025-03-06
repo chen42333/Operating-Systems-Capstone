@@ -8,24 +8,6 @@
 extern void *dtb_addr;
 extern void exec_prog();
 
-void exception_entry()
-{
-    uint64_t value;
-
-    asm volatile ("mrs %0, spsr_el1" : "=r"(value));
-    uart_write_string("SPSR_EL1: ");
-    uart_write_hex(value, sizeof(uint64_t));
-    uart_write_string("\r\n");
-    asm volatile ("mrs %0, elr_el1" : "=r"(value));
-    uart_write_string("ELR_EL1: ");
-    uart_write_hex(value, sizeof(uint64_t));
-    uart_write_string("\r\n");
-    asm volatile ("mrs %0, esr_el1" : "=r"(value));
-    uart_write_string("ESR_EL1: ");
-    uart_write_hex(value, sizeof(uint64_t));
-    uart_write_string("\r\n");
-}
-
 void mem_alloc()
 {
     char sz[STRLEN];

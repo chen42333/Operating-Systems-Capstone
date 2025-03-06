@@ -68,6 +68,23 @@ int uart_write_hex(uint64_t num, uint32_t size)
     return 0;
 }
 
+int uart_write_dec(uint64_t num)
+{
+    char buf[21];
+    int i;
+
+    for (i = 0; num > 0; i++)
+    {
+        buf[i] = num % 10 + '0';
+        num /= 10;
+    }
+
+    for (i--; i >= 0; i--)
+        uart_write_char(buf[i]);
+
+    return 0;
+}
+
 int uart_read(char *str, uint32_t size, int mode)
 {
     int i;

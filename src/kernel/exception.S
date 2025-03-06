@@ -1,5 +1,7 @@
+.equ CORE0_TIMER_IRQ_CTRL, 0x40000040
+
 .section .text
-.global from_el2_to_el1, exception_vector_table, set_exception_vector_table
+.global from_el2_to_el1, exception_vector_table, set_exception_vector_table, core_timer_enable
 
 // save general registers to stack
 .macro save_all
@@ -57,6 +59,24 @@ exception_handler:
     load_all
     eret
 
+core_timer_enable:
+  mov x0, 1
+  msr cntp_ctl_el0, x0 // enable
+  mrs x0, cntfrq_el0
+  lsl x0, x0, #1 // left-shift 1 bit (*2)
+  msr cntp_tval_el0, x0 // set expired time
+  mov x0, 2
+  ldr x1, =CORE0_TIMER_IRQ_CTRL
+  str w0, [x1] // unmask timer interrupt
+  ret
+
+core_timer_handler:
+  bl elasped_time
+  mrs x0, cntfrq_el0
+  lsl x0, x0, #1 // left-shift 1 bit (*2)
+  msr cntp_tval_el0, x0
+  eret
+
 .align 11 // vector table should be aligned to 0x800
 
 exception_vector_table:
@@ -80,7 +100,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b exception_handler
+  b core_timer_handler
   .align 7
   b exception_handler
   .align 7
