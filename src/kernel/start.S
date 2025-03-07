@@ -29,7 +29,7 @@ _loop1:
   cmp x0, x1
   bge _end_loop1
   str xzr, [x0]
-  add x0, x0, #WORD_SIZE
+  add x0, x0, WORD_SIZE
   b _loop1
 
 _end_loop1:
