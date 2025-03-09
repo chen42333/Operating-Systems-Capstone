@@ -14,7 +14,7 @@ void mem_alloc()
     void *data;
 
     uart_write_string("Size (hex): ", IO_ASYNC);
-    uart_read(sz, STRLEN, STRING_MODE, IO_SYNC);
+    uart_read(sz, STRLEN, STRING_MODE, IO_ASYNC);
 
     data = simple_malloc(hstr2u32(sz, strlen(sz)));
     if (data != NULL)
@@ -31,13 +31,15 @@ int main()
 
     asm volatile ("mov %0, x28" : "=r"(dtb_addr));
     uart_init();
+    clear_read_fifo();
+    clear_write_fifo();
     enable_uart_int();
     fdt_traverse(initramfs_callback);
 
     while (true)
     {
         uart_write_string("# ", IO_ASYNC);
-        uart_read(cmd, STRLEN, STRING_MODE, IO_SYNC);
+        uart_read(cmd, STRLEN, STRING_MODE, IO_ASYNC);
         if (!strcmp("help", cmd))
             uart_write_string("help\t: print this help menu\r\n"
                     "hello\t: print Hello World!\r\n"

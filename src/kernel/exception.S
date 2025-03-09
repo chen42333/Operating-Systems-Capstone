@@ -81,7 +81,7 @@ irq_handler:
 
     ldr x0, =AUX_MU_IIR_REG
     ldr x1, [x0]
-    and x2, x1, 0b10
+    and x2, x1, 0b110
     cmp x2, 0b10
     beq tx_int_handler
 
