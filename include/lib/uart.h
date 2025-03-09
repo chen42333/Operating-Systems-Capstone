@@ -38,11 +38,11 @@ extern struct ring_buf r_buf, w_buf;
 
 void enable_uart_int();
 void uart_init();
-int uart_write_char(char c, int io_mode);
-int uart_write_string(char *str, int io_mode);
-int uart_write_hex(uint64_t num, uint32_t size, int io_mode);
-int uart_write_dec(uint64_t num, int io_mode);
-int uart_read(char *str, uint32_t size, int mode, int io_mode);
+int uart_write_char(char c);
+int uart_write_string(char *str);
+int uart_write_hex(uint64_t num, uint32_t size);
+int uart_write_dec(uint64_t num);
+int uart_read(char *str, uint32_t size, int mode);
 
 inline static void ring_buf_init(struct ring_buf *rb)
 {
@@ -81,9 +81,9 @@ inline static char ring_buf_consume(struct ring_buf *rb)
     return ret;
 }
 
-inline static int uart_write_newline(int io_mode)
+inline static int uart_write_newline()
 {
-    return uart_write_string("\r\n", io_mode);
+    return uart_write_string("\r\n");
 }
 
 inline static void enable_read_int()
@@ -140,10 +140,10 @@ inline static void clear_write_fifo()
     set32(AUX_MU_IIR_REG, data);
 }
 
-inline static void err(char *str, int io_mode)
+inline static void err(char *str)
 {
-    uart_write_string("Error:\t", io_mode);
-    uart_write_string(str, io_mode);
+    uart_write_string("Error:\t");
+    uart_write_string(str);
     return;
 }
 

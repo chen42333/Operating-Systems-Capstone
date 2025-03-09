@@ -15,26 +15,26 @@ int main(void *_dtb_addr)
         uint32_t magic, data_len, checksum;
         uint32_t sum = 0;
 
-        uart_read(buf, 4, RAW_MODE, IO_SYNC);
+        uart_read(buf, 4, RAW_MODE);
         magic = *(uint32_t*)buf;
-        uart_read(buf, 4, RAW_MODE, IO_SYNC);
+        uart_read(buf, 4, RAW_MODE);
         data_len = *(uint32_t*)buf;
-        uart_read(buf, 4, RAW_MODE, IO_SYNC);
+        uart_read(buf, 4, RAW_MODE);
         checksum = *(uint32_t*)buf;
 
         char data[data_len];
-        uart_read(data, data_len, RAW_MODE, IO_SYNC);
+        uart_read(data, data_len, RAW_MODE);
         
         for (int i = 0; i < data_len; i++)
             sum += (uint32_t)(unsigned char)data[i];
 
         if (magic != MAGIC)
-            uart_write_string("Invalid file\r\n", IO_SYNC);
+            uart_write_string("Invalid file\r\n");
         else if (sum != checksum)
-            uart_write_string("File corrupted\r\n", IO_SYNC);
+            uart_write_string("File corrupted\r\n");
         else
         {
-            uart_write_string("File received\r\n", IO_SYNC);
+            uart_write_string("File received\r\n");
             memcpy((void*)_skernel, (void*)data, data_len);
             asm volatile ("mov x0, %0" :: "r"(_dtb_addr));
             asm volatile ("b _skernel");

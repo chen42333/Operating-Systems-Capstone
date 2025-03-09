@@ -3,6 +3,7 @@
 
 
 struct ring_buf r_buf, w_buf;
+int io_mode = IO_SYNC;
 
 void enable_uart_int()
 {
@@ -25,6 +26,9 @@ void enable_uart_int()
     asm volatile("mvn x1, x1");
     asm volatile("and x0, x0, x1");
     asm volatile("msr daif, x0");
+
+    // IO after this line will be asynchronous
+    io_mode = IO_ASYNC;
 }
 
 void uart_init()
@@ -57,7 +61,7 @@ void uart_init()
     set32(AUX_MU_CNTL_REG, 3);
 }
 
-int uart_write_char(char c, int io_mode)
+int uart_write_char(char c)
 {
     if (io_mode == IO_SYNC)
     {
@@ -73,19 +77,19 @@ int uart_write_char(char c, int io_mode)
     return 0;
 }
 
-int uart_write_string(char *str, int io_mode)
+int uart_write_string(char *str)
 {
     for (int i = 0; str[i] != '\0'; i++)
-       uart_write_char(str[i], io_mode);
+       uart_write_char(str[i]);
 
     return 0;
 }
 
-int uart_write_hex(uint64_t num, uint32_t size, int io_mode)
+int uart_write_hex(uint64_t num, uint32_t size)
 {
     char buf[size * 2 + 1];
 
-    uart_write_string("0x", io_mode);
+    uart_write_string("0x");
     for (int i = size * 2 - 1; i >= 0 ; i--)
     {
         uint64_t byte = num % 16;
@@ -97,12 +101,12 @@ int uart_write_hex(uint64_t num, uint32_t size, int io_mode)
     }
     
     buf[size * 2] = '\0';
-    uart_write_string(buf, io_mode);
+    uart_write_string(buf);
 
     return 0;
 }
 
-int uart_write_dec(uint64_t num, int io_mode)
+int uart_write_dec(uint64_t num)
 {
     char buf[21];
     int i;
@@ -114,12 +118,12 @@ int uart_write_dec(uint64_t num, int io_mode)
     }
 
     for (i--; i >= 0; i--)
-        uart_write_char(buf[i], io_mode);
+        uart_write_char(buf[i]);
 
     return 0;
 }
 
-int uart_read(char *str, uint32_t size, int mode, int io_mode)
+int uart_read(char *str, uint32_t size, int mode)
 {
     int i;
     char c;
@@ -146,24 +150,24 @@ int uart_read(char *str, uint32_t size, int mode, int io_mode)
                 if (i > 0)
                 {
                     i -= 2;
-                    uart_write_string("\b \b", io_mode);
+                    uart_write_string("\b \b");
                 }
                 else
                     i--;
             }
             else if (c == '\r')
             {
-                uart_write_string("\r\n", io_mode);
+                uart_write_string("\r\n");
                 break;
             }
             else if (c == '\0' || c == '\n')
             {
-                uart_write_char(c, io_mode);
+                uart_write_char(c);
                 break;
             } 
             else
             {
-                uart_write_char(c, io_mode);
+                uart_write_char(c);
                 str[i] = c;
             }
         }

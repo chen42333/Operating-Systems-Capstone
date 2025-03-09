@@ -19,10 +19,10 @@ void ls()
             break;
         
         if (!strcmp(".", record->payload))
-            uart_write_string(record->payload, IO_ASYNC);
+            uart_write_string(record->payload);
         else
-            uart_write_string(record->payload + 2, IO_ASYNC);
-        uart_write_string("\r\n", IO_ASYNC);
+            uart_write_string(record->payload + 2);
+        uart_write_string("\r\n");
 
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
         addr += ((file_size + 3) & ~3);
@@ -45,11 +45,11 @@ void cat()
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
 
-            uart_write_string("Filename: ", IO_ASYNC);
-            uart_write_string(record->payload + 2, IO_ASYNC);
-            uart_write_string("\r\n", IO_ASYNC);
-            uart_write_string(record->payload + offset, IO_ASYNC);
-            uart_write_string("\r\n", IO_ASYNC);
+            uart_write_string("Filename: ");
+            uart_write_string(record->payload + 2);
+            uart_write_string("\r\n");
+            uart_write_string(record->payload + offset);
+            uart_write_string("\r\n");
 
             break;
         }

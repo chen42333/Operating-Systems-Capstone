@@ -12,7 +12,7 @@ void fdt_traverse(int (*func)(void*, char*))
     bool end = false;
     
     if (big2host(hdr->magic) != 0xd00dfeed)
-        err("Invalid .dtb file\r\n", IO_ASYNC);
+        err("Invalid .dtb file\r\n");
 
     p = dtb_addr + big2host(hdr->off_dt_struct);
 
@@ -62,7 +62,7 @@ void fdt_traverse(int (*func)(void*, char*))
                 end = true;
                 break;
             default:
-                err("Invalid fdt token\r\n", IO_ASYNC);
+                err("Invalid fdt token\r\n");
                 break;
         }
     }
