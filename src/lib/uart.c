@@ -1,6 +1,32 @@
 #include "utils.h"
 #include "uart.h"
 
+
+struct ring_buf r_buf, w_buf;
+
+void enable_uart_int()
+{
+    uint32_t data;
+
+    data = 0b1100;
+    set32(AUX_MU_IER_REG, data);
+
+    data = get32(IRQs1);
+    data |= (1 << 29);
+    set32(IRQs1, data);
+
+    // Initialize read/write buffer
+    ring_buf_init(&r_buf);
+    ring_buf_init(&w_buf);
+
+    // Enable interrupt in EL1 (set the 7th bit of DAIF)
+    asm volatile("mrs x0, daif");
+    asm volatile("mov x1, 0x80");
+    asm volatile("mvn x1, x1");
+    asm volatile("and x0, x0, x1");
+    asm volatile("msr daif, x0");
+}
+
 void uart_init()
 {
     uint32_t data;
@@ -31,27 +57,35 @@ void uart_init()
     set32(AUX_MU_CNTL_REG, 3);
 }
 
-int uart_write_char(char c)
+int uart_write_char(char c, int io_mode)
 {
-    while (!(get32(AUX_MU_LSR_REG) & (1 << 5))) ;
-    set8(AUX_MU_IO_REG, c);
+    if (io_mode == IO_SYNC)
+    {
+        while (!(get32(AUX_MU_LSR_REG) & (1 << 5))) ;
+        set8(AUX_MU_IO_REG, c);
+    }
+    else if (io_mode == IO_ASYNC)
+    {
+        ring_buf_produce(&w_buf, c);
+        enable_write_int();
+    }
 
     return 0;
 }
 
-int uart_write_string(char *str)
+int uart_write_string(char *str, int io_mode)
 {
     for (int i = 0; str[i] != '\0'; i++)
-       uart_write_char(str[i]);
+       uart_write_char(str[i], io_mode);
 
     return 0;
 }
 
-int uart_write_hex(uint64_t num, uint32_t size)
+int uart_write_hex(uint64_t num, uint32_t size, int io_mode)
 {
     char buf[size * 2 + 1];
 
-    uart_write_string("0x");
+    uart_write_string("0x", io_mode);
     for (int i = size * 2 - 1; i >= 0 ; i--)
     {
         uint64_t byte = num % 16;
@@ -63,12 +97,12 @@ int uart_write_hex(uint64_t num, uint32_t size)
     }
     
     buf[size * 2] = '\0';
-    uart_write_string(buf);
+    uart_write_string(buf, io_mode);
 
     return 0;
 }
 
-int uart_write_dec(uint64_t num)
+int uart_write_dec(uint64_t num, int io_mode)
 {
     char buf[21];
     int i;
@@ -80,20 +114,28 @@ int uart_write_dec(uint64_t num)
     }
 
     for (i--; i >= 0; i--)
-        uart_write_char(buf[i]);
+        uart_write_char(buf[i], io_mode);
 
     return 0;
 }
 
-int uart_read(char *str, uint32_t size, int mode)
+int uart_read(char *str, uint32_t size, int mode, int io_mode)
 {
     int i;
     char c;
 
+    if (io_mode == IO_ASYNC)
+        enable_read_int();
+
     for (i = 0; i < size - 1; i++)
     {
-        while (!(get32(AUX_MU_LSR_REG) & 1)) ;
-        c = get8(AUX_MU_IO_REG);
+        if (io_mode == IO_SYNC)
+        {
+            while (!(get32(AUX_MU_LSR_REG) & 1)) ;
+            c = get8(AUX_MU_IO_REG);
+        }
+        else if (io_mode == IO_ASYNC)
+            c = ring_buf_consume(&r_buf);
         
         if (mode == RAW_MODE)
             str[i] = c;
@@ -104,24 +146,24 @@ int uart_read(char *str, uint32_t size, int mode)
                 if (i > 0)
                 {
                     i -= 2;
-                    uart_write_string("\b \b");
+                    uart_write_string("\b \b", io_mode);
                 }
                 else
                     i--;
             }
             else if (c == '\r')
             {
-                uart_write_string("\r\n");
+                uart_write_string("\r\n", io_mode);
                 break;
             }
             else if (c == '\0' || c == '\n')
             {
-                uart_write_char(c);
+                uart_write_char(c, io_mode);
                 break;
             } 
             else
             {
-                uart_write_char(c);
+                uart_write_char(c, io_mode);
                 str[i] = c;
             }
         }
@@ -129,11 +171,19 @@ int uart_read(char *str, uint32_t size, int mode)
 
     if (mode == RAW_MODE)
     {
-        while (!(get32(AUX_MU_LSR_REG) & 1)) ;
-        str[i] = get8(AUX_MU_IO_REG);
+        if (io_mode == IO_SYNC)
+        {
+            while (!(get32(AUX_MU_LSR_REG) & 1)) ;
+            str[i] = get8(AUX_MU_IO_REG);
+        }
+        else if (io_mode == IO_ASYNC)
+            str[i] = ring_buf_consume(&r_buf);
     }
     else if (mode == STRING_MODE)
         str[i] = '\0';
+
+    if (io_mode == IO_ASYNC)
+        disable_read_int();
 
     return i;
 }

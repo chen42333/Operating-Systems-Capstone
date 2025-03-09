@@ -37,9 +37,9 @@ static void get_board_revision()
     uint32_t data[n_buf];
     mailbox_request(n_buf, GET_BOARD_REVISION, data);
 
-    uart_write_string("Board revision: ");
-    uart_write_hex(data[0], sizeof(uint32_t));
-    uart_write_string("\r\n");
+    uart_write_string("Board revision: ", IO_ASYNC);
+    uart_write_hex(data[0], sizeof(uint32_t), IO_ASYNC);
+    uart_write_string("\r\n", IO_ASYNC);
 }
 
 static void get_memory_info()
@@ -48,17 +48,17 @@ static void get_memory_info()
     uint32_t data[n_buf];
     mailbox_request(2, GET_ARM_MEMORY, data);
 
-    uart_write_string("ARM memory base address: ");
-    uart_write_hex(data[0], sizeof(uint32_t));
-    uart_write_string("\r\n");
-    uart_write_string("ARM memory size: ");
-    uart_write_hex(data[1], sizeof(uint32_t));
-    uart_write_string("\r\n");
+    uart_write_string("ARM memory base address: ", IO_ASYNC);
+    uart_write_hex(data[0], sizeof(uint32_t), IO_ASYNC);
+    uart_write_string("\r\n", IO_ASYNC);
+    uart_write_string("ARM memory size: ", IO_ASYNC);
+    uart_write_hex(data[1], sizeof(uint32_t), IO_ASYNC);
+    uart_write_string("\r\n", IO_ASYNC);
 }
 
 void mailbox_info()
 {
-    uart_write_string("Mailbox info:\r\n");
+    uart_write_string("Mailbox info:\r\n", IO_ASYNC);
     get_board_revision();
     get_memory_info();
     return;

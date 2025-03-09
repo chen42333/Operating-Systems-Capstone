@@ -54,7 +54,7 @@ void* simple_malloc(size_t size)
         return ret;
     }
 
-    uart_write_string("Allocation failed\r\n");
+    uart_write_string("Allocation failed\r\n", IO_ASYNC);
     
     return NULL;
 }

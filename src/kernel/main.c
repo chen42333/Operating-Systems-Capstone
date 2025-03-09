@@ -13,15 +13,15 @@ void mem_alloc()
     char sz[STRLEN];
     void *data;
 
-    uart_write_string("Size (hex): ");
-    uart_read(sz, STRLEN, STRING_MODE);
+    uart_write_string("Size (hex): ", IO_ASYNC);
+    uart_read(sz, STRLEN, STRING_MODE, IO_SYNC);
 
     data = simple_malloc(hstr2u32(sz, strlen(sz)));
     if (data != NULL)
     {
-        uart_write_string("Allocator test: The data allocated from the heap is: ");
-        uart_write_hex((uintptr_t)data, sizeof(uint64_t));
-        uart_write_string("\r\n");
+        uart_write_string("Allocator test: The data allocated from the heap is: ", IO_ASYNC);
+        uart_write_hex((uintptr_t)data, sizeof(uint64_t), IO_ASYNC);
+        uart_write_string("\r\n", IO_ASYNC);
     }
 }
 
@@ -30,13 +30,14 @@ int main()
     char cmd[STRLEN];
 
     asm volatile ("mov %0, x28" : "=r"(dtb_addr));
-    fdt_traverse(initramfs_callback);
     uart_init();
+    enable_uart_int();
+    fdt_traverse(initramfs_callback);
 
     while (true)
     {
-        uart_write_string("# ");
-        uart_read(cmd, STRLEN, STRING_MODE);
+        uart_write_string("# ", IO_ASYNC);
+        uart_read(cmd, STRLEN, STRING_MODE, IO_SYNC);
         if (!strcmp("help", cmd))
             uart_write_string("help\t: print this help menu\r\n"
                     "hello\t: print Hello World!\r\n"
@@ -45,9 +46,9 @@ int main()
                     "ls\t: list all the files in ramdisk\r\n"
                     "cat\t: show the content of file1\r\n"
                     "memAlloc: allocate data from the heap\r\n"
-                    "ldProg\t: execute the specified program in the ramdisk\r\n");
+                    "ldProg\t: execute the specified program in the ramdisk\r\n", IO_ASYNC);
         else if (!strcmp("hello", cmd))
-            uart_write_string("Hello World!\r\n");
+            uart_write_string("Hello World!\r\n", IO_ASYNC);
         else if (!strcmp("mailbox", cmd))
             mailbox_info();
         else if (!strcmp("reboot", cmd))
@@ -64,7 +65,7 @@ int main()
             exec_prog();
         }
         else
-            uart_write_string("Invalid command\r\n");
+            uart_write_string("Invalid command\r\n", IO_ASYNC);
     }
     return 0;
 }

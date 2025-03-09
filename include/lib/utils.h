@@ -2,7 +2,6 @@
 #define __UTILS_H
 
 #include <stdint.h>
-#include "uart.h"
 
 #define true 1
 #define false 0
@@ -29,13 +28,6 @@ uint32_t hstr2u32(char *str, int size);
 void memcpy(void *dst, void *src, uint32_t size);
 void* simple_malloc(size_t size);
 uint32_t big2host(uint32_t num);
-
-inline static void err(char *str)
-{
-    uart_write_string("Error:\t");
-    uart_write_string(str);
-    return;
-}
 
 inline static void set32(void *addr, uint32_t value) {
     volatile uint32_t *ptr = (uint32_t*)addr;
