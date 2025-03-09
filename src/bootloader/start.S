@@ -13,7 +13,6 @@ _start:
   ldr x2, [x1] 
   cmp x2, #0
   bne _start_new_loc
-  mov x28, x0 // .dtb address
   mov w4, 1
   str w4, [x1]
 

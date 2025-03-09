@@ -9,6 +9,7 @@ var: .skip 8
 .global _start, exec_prog
 
 _start:
+  mov x28, x0; // .dtb address
   bl from_el2_to_el1
   bl set_exception_vector_table
   mrs x0, MPIDR_EL1

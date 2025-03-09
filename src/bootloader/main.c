@@ -5,7 +5,7 @@
 
 extern char _skernel[];
 
-int main()
+int main(void *_dtb_addr)
 {
     uart_init();
     
@@ -36,6 +36,7 @@ int main()
         {
             uart_write_string("File received\r\n");
             memcpy((void*)_skernel, (void*)data, data_len);
+            asm volatile ("mov x0, %0" :: "r"(_dtb_addr));
             asm volatile ("b _skernel");
             break;
         }
