@@ -14,9 +14,9 @@ with open('kernel8.img', 'rb') as file:
     kernel_data = file.read()
 
 header = struct.pack('<III',
-    0x544f4f42,
-    len(kernel_data),
-    checksum(kernel_data)
+    0x544f4f42, # "BOOT" in hex
+    len(kernel_data), # size
+    checksum(kernel_data) # checksum
 )
 
 if (len(sys.argv) < 2):

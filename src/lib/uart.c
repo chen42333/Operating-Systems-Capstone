@@ -1,7 +1,6 @@
 #include "utils.h"
 #include "uart.h"
 
-
 struct ring_buf r_buf, w_buf;
 int io_mode = IO_SYNC;
 
@@ -20,12 +19,8 @@ void enable_uart_int()
     ring_buf_init(&r_buf);
     ring_buf_init(&w_buf);
 
-    // Enable interrupt in EL1 (set the 7th bit of DAIF)
-    asm volatile("mrs x0, daif");
-    asm volatile("mov x1, 0x80");
-    asm volatile("mvn x1, x1");
-    asm volatile("and x0, x0, x1");
-    asm volatile("msr daif, x0");
+    // Enable interrupt in EL1
+    asm volatile("msr daifclr, 0xf");
 
     // IO after this line will be asynchronous
     io_mode = IO_ASYNC;
@@ -51,14 +46,14 @@ void uart_init()
     set32(GPPUD, 0);
     set32(GPPUDCLK0, 0);
 
-    set32(AUXENB, 1);
-    set32(AUX_MU_CNTL_REG, 0);
-    set32(AUX_MU_IER_REG, 0);
-    set32(AUX_MU_LCR_REG, 3);
-    set32(AUX_MU_MCR_REG, 0);
-    set32(AUX_MU_BAUD_REG, 270);
+    set32(AUXENB, 1); // enable mini UART
+    set32(AUX_MU_CNTL_REG, 0); // disable transmitter and receiver during configuration
+    set32(AUX_MU_IER_REG, 0); // disable interrupt because currently it does’t need interrupt
+    set32(AUX_MU_LCR_REG, 3); // set the data size to 8 bit
+    set32(AUX_MU_MCR_REG, 0); // don’t need auto flow control
+    set32(AUX_MU_BAUD_REG, 270); // set baud rate to 115200
     set32(AUX_MU_IIR_REG, 6);
-    set32(AUX_MU_CNTL_REG, 3);
+    set32(AUX_MU_CNTL_REG, 3); // enable the transmitter and receiver
 }
 
 int uart_write_char(char c)
