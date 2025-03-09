@@ -38,10 +38,14 @@ make bootloader
 ```
 3. Test
 ```
-make test TARGET=<target> _QEMUFLAGS=<additional flags>
+make test _QEMUFLAGS=<additional flags> TARGET=<target>
 ```
-- `test` can be replaced with `test-pty`, `test-asm`, `test-int`
-- `<target>`: `bootloader` or `kernel`
+- `test` can be replaced with
+    - `test-pty`: open a pseudo terminal
+    - `test-asm`: dump the assembly
+    - `test-int`: dump interrupts
+    - For combined or other functions, add the flags in `<additional flags>`
+- `<target>`: `kernel` (default) or `bootloader`
 4. Test with LLDB/GDB (optional)
 ```
 make debug _QEMUFLAGS=<additional flags> TARGET=<target> 
