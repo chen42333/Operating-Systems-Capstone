@@ -5,7 +5,7 @@ struct t_q timer_queue;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 {
-    uint64_t count, freq;
+    uint64_t count;
     struct timer_queue_element *element;
     int idx = timer_queue.producer_idx;
 
@@ -13,7 +13,6 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
     while ((timer_queue.producer_idx + 1) % TIMER_QUEUE_LEN == timer_queue.consumer_idx) ;
 
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
-    asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
 
     element = &timer_queue.buf[timer_queue.producer_idx++];
     element->handler = callback;
@@ -48,7 +47,7 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 void process_timer()
 {
     uint64_t count, ival;
-    struct timer_queue_element *element;
+    struct timer_queue_element *element, *next_element;
 
     if (timer_queue.producer_idx == timer_queue.consumer_idx) // The timer queue is empty (should not happen)
         return;
@@ -57,8 +56,9 @@ void process_timer()
     timer_queue.consumer_idx %= TIMER_QUEUE_LEN;
 
     // Program the next timer interrupt
+    next_element = &timer_queue.buf[timer_queue.consumer_idx];
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
-    ival = element->cur_ticks + element->duration_ticks - count;
+    ival = next_element->cur_ticks + next_element->duration_ticks - count;
     asm volatile ("msr cntp_tval_el0, %0" :: "r"(ival));
 
     element->handler(element->data);
@@ -70,10 +70,15 @@ void elasped_time(void* data)
 
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
+    add_timer(elasped_time, 2 * freq, NULL);
     uart_write_dec(count / freq);
     uart_write_string(" seconds after booting\r\n");
-    
-    add_timer(elasped_time, 2 * freq, NULL);
+}
+
+void print_msg(void *data)
+{
+    uart_write_string((char*)data);
+    uart_write_newline();
 }
 
 void init_timer_queue()
@@ -95,15 +100,15 @@ void exception_entry()
     asm volatile ("mrs %0, spsr_el1" : "=r"(value));
     uart_write_string("SPSR_EL1: ");
     uart_write_hex(value, sizeof(uint64_t));
-    uart_write_string("\r\n");
+    uart_write_newline();
     asm volatile ("mrs %0, elr_el1" : "=r"(value));
     uart_write_string("ELR_EL1: ");
     uart_write_hex(value, sizeof(uint64_t));
-    uart_write_string("\r\n");
+    uart_write_newline();
     asm volatile ("mrs %0, esr_el1" : "=r"(value));
     uart_write_string("ESR_EL1: ");
     uart_write_hex(value, sizeof(uint64_t));
-    uart_write_string("\r\n");
+    uart_write_newline();
 }
 
 void tx_int()
@@ -123,4 +128,32 @@ void rx_int()
 
     c = get8(AUX_MU_IO_REG);
     ring_buf_produce(&r_buf, c);
+}
+
+int set_timeout()
+{
+    char *msg, *sec_str, *tail;
+    void *data;
+    uint32_t sec;
+    uint64_t freq;
+
+    if ((msg = strtok(NULL, " ")) == NULL)
+        return -1;
+    
+    if ((sec_str = strtok(NULL, " ")) == NULL)
+        return -1;
+    
+    if ((tail = strtok(NULL, "")) != NULL)
+        return -1;
+    
+    if ((sec = str2u32(sec_str, strlen(sec_str))) < 0)
+        return -1;
+
+    data = simple_malloc(strlen(msg) + 1);
+    strcpy((char*)data, msg);
+    
+    asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
+    add_timer(print_msg, freq * sec, data);
+
+    return 0;
 }

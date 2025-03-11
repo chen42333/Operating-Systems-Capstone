@@ -39,7 +39,7 @@ static void get_board_revision()
 
     uart_write_string("Board revision: ");
     uart_write_hex(data[0], sizeof(uint32_t));
-    uart_write_string("\r\n");
+    uart_write_newline();
 }
 
 static void get_memory_info()
@@ -50,10 +50,10 @@ static void get_memory_info()
 
     uart_write_string("ARM memory base address: ");
     uart_write_hex(data[0], sizeof(uint32_t));
-    uart_write_string("\r\n");
+    uart_write_newline();
     uart_write_string("ARM memory size: ");
     uart_write_hex(data[1], sizeof(uint32_t));
-    uart_write_string("\r\n");
+    uart_write_newline();
 }
 
 void mailbox_info()

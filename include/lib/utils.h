@@ -24,8 +24,11 @@ extern char _estack[];
 extern char _sprog[];
 
 int strcmp(const char *str1, const char *str2);
-uint32_t hstr2u32(char *str, int size);
+uint32_t hstr2u32(char *hstr, int size);
+uint32_t str2u32(char *str, int size);
 void memcpy(void *dst, void *src, uint32_t size);
+void strcpy(char *dst, char *src);
+char* strtok(char *str, char *delim);
 void* simple_malloc(size_t size);
 uint32_t big2host(uint32_t num);
 

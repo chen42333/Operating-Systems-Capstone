@@ -152,7 +152,7 @@ int uart_read(char *str, uint32_t size, int mode)
             }
             else if (c == '\r')
             {
-                uart_write_string("\r\n");
+                uart_write_newline();
                 break;
             }
             else if (c == '\0' || c == '\n')

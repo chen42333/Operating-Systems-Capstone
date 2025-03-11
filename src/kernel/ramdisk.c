@@ -22,7 +22,7 @@ void ls()
             uart_write_string(record->payload);
         else
             uart_write_string(record->payload + 2);
-        uart_write_string("\r\n");
+        uart_write_newline();
 
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
         addr += ((file_size + 3) & ~3);
@@ -47,9 +47,9 @@ void cat()
 
             uart_write_string("Filename: ");
             uart_write_string(record->payload + 2);
-            uart_write_string("\r\n");
+            uart_write_newline();
             uart_write_string(record->payload + offset);
-            uart_write_string("\r\n");
+            uart_write_newline();
 
             break;
         }

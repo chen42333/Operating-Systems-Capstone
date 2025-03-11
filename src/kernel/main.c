@@ -4,6 +4,7 @@
 #include "boot.h"
 #include "ramdisk.h"
 #include "device_tree.h"
+#include "interrupt.h"
 
 extern void *dtb_addr;
 extern void exec_prog();
@@ -14,15 +15,21 @@ void mem_alloc()
     char sz[STRLEN];
     void *data;
 
-    uart_write_string("Size (hex): ");
+    uart_write_string("Size: ");
     uart_read(sz, STRLEN, STRING_MODE);
 
-    data = simple_malloc(hstr2u32(sz, strlen(sz)));
-    if (data != NULL)
+    if (sz[0] == '0' && (sz[1] == 'x' || sz[1] == 'X'))
+        data = simple_malloc(hstr2u32(sz + 2, strlen(sz + 2)));
+    else
+        data = simple_malloc(str2u32(sz, strlen(sz)));
+
+    if (data < 0)
+        uart_write_string("Invalid number\r\n");
+    else if (data != NULL)
     {
         uart_write_string("Allocator test: The data allocated from the heap is: ");
         uart_write_hex((uintptr_t)data, sizeof(uint64_t));
-        uart_write_string("\r\n");
+        uart_write_newline();
     }
 }
 
@@ -52,7 +59,8 @@ int main(void *_dtb_addr)
                     "ls\t: list all the files in ramdisk\r\n"
                     "cat\t: show the content of file1\r\n"
                     "memAlloc: allocate data from the heap\r\n"
-                    "ldProg\t: execute the specified program in the ramdisk\r\n");
+                    "ldProg\t: execute the specified program in the ramdisk\r\n"
+                    "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n");
         else if (!strcmp("hello", cmd))
             uart_write_string("Hello World!\r\n");
         else if (!strcmp("mailbox", cmd))
@@ -69,6 +77,13 @@ int main(void *_dtb_addr)
         {
             load_prog();
             exec_prog();
+        }
+        else if (!strcmp(strtok(cmd, " "), "setTimeout"))
+        {
+            if (set_timeout())
+            {
+                uart_write_string("Invalid argument\r\n");
+            }
         }
         else
             uart_write_string("Invalid command\r\n");

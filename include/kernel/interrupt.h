@@ -23,5 +23,6 @@ struct t_q
 extern struct t_q timer_queue;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data);
+int set_timeout();
 
 #endif
