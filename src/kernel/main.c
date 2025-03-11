@@ -7,6 +7,7 @@
 
 extern void *dtb_addr;
 extern void exec_prog();
+extern void core_timer_enable();
 
 void mem_alloc()
 {
@@ -25,17 +26,20 @@ void mem_alloc()
     }
 }
 
-int main()
+int main(void *_dtb_addr)
 {
     char cmd[STRLEN];
 
-    asm volatile ("mov %0, x28" : "=r"(dtb_addr));
+    core_timer_enable();
+
     uart_init();
     clear_read_fifo();
     clear_write_fifo();
     enable_uart_int();
-    fdt_traverse(initramfs_callback);
 
+    dtb_addr = _dtb_addr;
+    fdt_traverse(initramfs_callback);
+    
     while (true)
     {
         uart_write_string("# ");

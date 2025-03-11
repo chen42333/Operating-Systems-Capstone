@@ -64,9 +64,13 @@ exception_handler:
 core_timer_enable:
     mov x0, 1
     msr cntp_ctl_el0, x0 // enable
-    mrs x0, cntfrq_el0
-    lsl x0, x0, #1 // left-shift 1 bit (*2)
-    msr cntp_tval_el0, x0 // set expired time
+
+    sub sp, sp, 8
+    str x30, [sp]
+    bl init_timer_queue
+    ldr x30, [sp]
+    add sp, sp, 8
+
     mov x0, 2
     ldr x1, =CORE0_TIMER_IRQ_CTRL
     str w0, [x1] // unmask timer interrupt
@@ -92,10 +96,7 @@ irq_handler:
     eret
 
 core_timer_handler:
-    bl elasped_time
-    mrs x0, cntfrq_el0
-    lsl x0, x0, #1 // left-shift 1 bit (*2)
-    msr cntp_tval_el0, x0
+    bl process_timer
     load_all
     eret
 

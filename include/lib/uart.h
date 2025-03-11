@@ -25,7 +25,7 @@
 #define IO_SYNC 0
 #define IO_ASYNC 1
 
-#define BUFLEN 4096
+#define BUFLEN 512
 
 struct ring_buf
 {

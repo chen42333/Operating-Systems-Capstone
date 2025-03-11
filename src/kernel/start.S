@@ -9,7 +9,7 @@ var: .skip 8
 .global _start, exec_prog
 
 _start:
-  mov x28, x0; // .dtb address
+  mov x28, x0 // .dtb address
   bl from_el2_to_el1
   bl set_exception_vector_table
   mrs x0, MPIDR_EL1
@@ -21,7 +21,6 @@ _other_cores:
   b _other_cores
   
 _core_0:
-  bl core_timer_enable
   // Initialize .bss
   adr x0, _sbss
   adr x1, _ebss
@@ -36,6 +35,7 @@ _loop1:
 _end_loop1:
   adr x0, _estack  // Set stack pointer
   mov sp, x0
+  mov x0, x28
   b main
   
 exec_prog:
