@@ -5,23 +5,23 @@ MEMORY
 }
 SECTIONS
 {
-  .text : { 
+  .text ALIGN(8): { 
     _stext = .;
     KEEP(*(.text._start))
     *(.text)
     _etext = .;
   } > MEM
-  .rodata : { 
+  .rodata ALIGN(8): { 
     _srodata = .;
     *(.rodata)
     _erodata = .;
   } > MEM
-  .data : { 
+  .data ALIGN(8): { 
     _sdata = .;
     *(.data) 
     _edata = .;
   } > MEM
-  .bss : { 
+  .bss ALIGN(8): { 
     _sbss = .;
     *(.bss) 
     _ebss = .;
