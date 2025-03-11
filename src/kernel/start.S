@@ -39,10 +39,12 @@ _end_loop1:
   b main
   
 exec_prog:
+  str x0, [sp, 8]
   mov x0, 0 
   msr spsr_el1, x0
   adr x0, _sprog
   msr elr_el1, x0
   adr x0, _eprog_stack
   msr sp_el0, x0
+  ldr x0, [sp, 8]
   eret

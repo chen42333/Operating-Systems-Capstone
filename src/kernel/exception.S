@@ -62,18 +62,14 @@ exception_handler:
     eret
 
 core_timer_enable:
+    save_all
     mov x0, 1
     msr cntp_ctl_el0, x0 // enable
-
-    sub sp, sp, 8
-    str x30, [sp]
     bl init_timer_queue
-    ldr x30, [sp]
-    add sp, sp, 8
-
     mov x0, 2
     ldr x1, =CORE0_TIMER_IRQ_CTRL
     str w0, [x1] // unmask timer interrupt
+    load_all
     ret
 
 irq_handler:

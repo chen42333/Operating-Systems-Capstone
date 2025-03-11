@@ -13,19 +13,26 @@ extern void core_timer_enable();
 void mem_alloc()
 {
     char sz[STRLEN];
+    size_t size;
     void *data;
 
     uart_write_string("Size: ");
     uart_read(sz, STRLEN, STRING_MODE);
 
     if (sz[0] == '0' && (sz[1] == 'x' || sz[1] == 'X'))
-        data = simple_malloc(hstr2u32(sz + 2, strlen(sz + 2)));
+        size = hstr2u32(sz + 2, strlen(sz + 2));
     else
-        data = simple_malloc(str2u32(sz, strlen(sz)));
+        size = str2u32(sz, strlen(sz));
 
-    if (data < 0)
+    if (size == 0)
+    {
         uart_write_string("Invalid number\r\n");
-    else if (data != NULL)
+        return;
+    }
+
+    data = simple_malloc(size);
+
+    if (data != NULL)
     {
         uart_write_string("Allocator test: The data allocated from the heap is: ");
         uart_write_hex((uintptr_t)data, sizeof(uint64_t));
@@ -37,12 +44,12 @@ int main(void *_dtb_addr)
 {
     char cmd[STRLEN];
 
-    core_timer_enable();
-
     uart_init();
     clear_read_fifo();
     clear_write_fifo();
     enable_uart_int();
+
+    core_timer_enable();
 
     dtb_addr = _dtb_addr;
     fdt_traverse(initramfs_callback);

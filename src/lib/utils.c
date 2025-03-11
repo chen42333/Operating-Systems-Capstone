@@ -36,7 +36,7 @@ uint32_t hstr2u32(char *hstr, int size)
         else if (hstr[i] >= 'a' && hstr[i] <= 'f')
             ret += (hstr[i] - 'a' + 10);
         else
-            return -1;
+            return 0;
     }
 
     return ret;
@@ -53,7 +53,7 @@ uint32_t str2u32(char *str, int size)
         if (str[i] >= '0' && str[i] <= '9')
             ret += (str[i] - '0');
         else
-            return -1;
+            return 0;
     }
 
     return ret;
