@@ -1,4 +1,3 @@
-.equ CORE0_TIMER_IRQ_CTRL, 0x40000040
 .equ CORE0_IRQ_SOURCE, 0x40000060
 .equ AUX_MU_IIR_REG, 0x3f215048
 
@@ -60,17 +59,6 @@ exception_handler:
     bl exception_entry
     load_all
     eret
-
-core_timer_enable:
-    save_all
-    mov x0, 1
-    msr cntp_ctl_el0, x0 // enable
-    bl init_timer_queue
-    mov x0, 2
-    ldr x1, =CORE0_TIMER_IRQ_CTRL
-    str w0, [x1] // unmask timer interrupt
-    load_all
-    ret
 
 irq_handler:
     save_all

@@ -93,6 +93,22 @@ void init_timer_queue()
     add_timer(elasped_time, freq * 2, NULL);
 }
 
+void core_timer_enable()
+{
+    asm volatile ("msr cntp_ctl_el0, %0" :: "r"((uint64_t)1)); // enable timer
+    init_timer_queue();
+    set32(CORE0_TIMER_IRQ_CTRL, 2); // unmask timer interrupt
+
+    /*
+    mov x0, 1
+    msr cntp_ctl_el0, x0 // enable
+    bl init_timer_queue
+    mov x0, 2
+    ldr x1, =CORE0_TIMER_IRQ_CTRL
+    str w0, [x1] // unmask timer interrupt
+    */
+}
+
 void exception_entry()
 {
     uint64_t value;
@@ -146,7 +162,7 @@ int set_timeout()
     if ((tail = strtok(NULL, "")) != NULL)
         return -1;
     
-    if ((sec = str2u32(sec_str, strlen(sec_str))) < 0)
+    if ((sec = str2u32(sec_str, strlen(sec_str))) == 0)
         return -1;
 
     data = simple_malloc(strlen(msg) + 1);
