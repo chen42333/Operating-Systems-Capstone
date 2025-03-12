@@ -3,29 +3,30 @@
 #include "mem.h"
 #include "interrupt.h"
 
-struct t_q timer_queue;
+struct ring_buf timer_queue;
 extern struct ring_buf r_buf, w_buf;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 {
     uint64_t count;
-    struct timer_queue_element *element;
+    struct timer_queue_element element;
+    struct timer_queue_element *buf = (struct timer_queue_element*)timer_queue.buf;
     int idx = timer_queue.producer_idx;
 
     // Wait until the timer queue is not full
-    while ((timer_queue.producer_idx + 1) % TIMER_QUEUE_LEN == timer_queue.consumer_idx) ;
+    while (ring_buf_full(&timer_queue)) ;
 
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
 
-    element = &timer_queue.buf[timer_queue.producer_idx++];
-    element->handler = callback;
-    element->cur_ticks = count;
-    element->duration_ticks = duration;
-    element->data = data;
-    timer_queue.producer_idx %= TIMER_QUEUE_LEN;
+    element.handler = callback;
+    element.cur_ticks = count;
+    element.duration_ticks = duration;
+    element.data = data;
+    ring_buf_produce(&timer_queue, &element, TIMER);
 
     for (; idx >= timer_queue.consumer_idx; idx--)
     {
+
         if (idx == timer_queue.consumer_idx)
         {
             // Program a new timer interrupt
@@ -33,14 +34,14 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
             break;
         }
         
-        if (count + duration < timer_queue.buf[idx - 1].cur_ticks + timer_queue.buf[idx - 1].duration_ticks)
+        if (count + duration < buf[idx - 1].cur_ticks + buf[idx - 1].duration_ticks)
         {
             // Move forward
             struct timer_queue_element tmp;
             
-            tmp = timer_queue.buf[idx];
-            timer_queue.buf[idx] = timer_queue.buf[idx - 1];
-            timer_queue.buf[idx - 1] = tmp;
+            tmp = buf[idx];
+            buf[idx] = buf[idx - 1];
+            buf[idx - 1] = tmp;
         }
         else
             break;
@@ -50,21 +51,20 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 void process_timer()
 {
     uint64_t count, ival;
-    struct timer_queue_element *element, *next_element;
+    struct timer_queue_element element, *next_element_ptr;
 
-    if (timer_queue.producer_idx == timer_queue.consumer_idx) // The timer queue is empty (should not happen)
+    if (ring_buf_empty(&timer_queue)) // The timer queue is empty (should not happen)
         return;
     
-    element = &timer_queue.buf[timer_queue.consumer_idx++];
-    timer_queue.consumer_idx %= TIMER_QUEUE_LEN;
+    ring_buf_consume(&timer_queue, &element, TIMER);
 
     // Program the next timer interrupt
-    next_element = &timer_queue.buf[timer_queue.consumer_idx];
+    next_element_ptr = &((struct timer_queue_element*)timer_queue.buf)[timer_queue.consumer_idx];
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
-    ival = next_element->cur_ticks + next_element->duration_ticks - count;
+    ival = next_element_ptr->cur_ticks + next_element_ptr->duration_ticks - count;
     asm volatile ("msr cntp_tval_el0, %0" :: "r"(ival));
 
-    element->handler(element->data);
+    element.handler(element.data);
 }
 
 void elasped_time(void* data)
@@ -88,9 +88,7 @@ void init_timer_queue()
 {
     uint64_t freq;
 
-    timer_queue.buf = (struct timer_queue_element*)simple_malloc(sizeof(struct timer_queue_element) * TIMER_QUEUE_LEN);
-    timer_queue.producer_idx = 0;
-    timer_queue.consumer_idx = 0;
+    ring_buf_init(&timer_queue, TIMER);
 
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
     add_timer(elasped_time, freq * 2, NULL);
