@@ -1,4 +1,6 @@
 #include "uart.h"
+#include "string.h"
+#include "mem.h"
 #include "interrupt.h"
 
 struct t_q timer_queue;

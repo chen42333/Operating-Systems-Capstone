@@ -1,5 +1,7 @@
 #include "utils.h"
 #include "uart.h"
+#include "string.h"
+#include "mem.h"
 #include "mailbox.h"
 #include "boot.h"
 #include "ramdisk.h"

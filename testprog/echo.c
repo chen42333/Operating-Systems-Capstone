@@ -3,7 +3,7 @@
 
 int main()
 {
-    char cmd[STRLEN];
+    char cmd[256];
     char *quit_cmd[] = {"quit", "q", "exit"};
     int size = sizeof(quit_cmd) / sizeof(quit_cmd[0]);
     bool quit = false;
@@ -11,7 +11,7 @@ int main()
     while (!quit)
     {
 
-        uart_read(cmd, STRLEN, STRING_MODE);
+        uart_read(cmd, 256, STRING_MODE);
 
         for (int i = 0; i < size; i++)
         {

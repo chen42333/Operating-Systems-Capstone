@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "utils.h"
 #include "device_tree.h"
+#include "string.h"
 
 void *ramdisk_addr;
 int idx = 0;
