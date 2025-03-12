@@ -54,6 +54,9 @@ from_el2_to_el1:
     msr elr_el2, lr
     eret // return to EL1
 
+empty:
+    eret
+
 exception_handler:
     save_all
     bl exception_entry
@@ -92,9 +95,6 @@ tx_int_handler:
 rx_int_handler:
     bl rx_int
     load_all
-    eret
-
-empty:
     eret
 
 .align 11 // vector table should be aligned to 0x800

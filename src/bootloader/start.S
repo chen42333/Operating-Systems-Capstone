@@ -11,8 +11,7 @@ _reloc: .word 0
 _start:
   adr x1, _reloc
   ldr x2, [x1] 
-  cmp x2, #0
-  bne _start_new_loc
+  cbnz x2, _start_new_loc
   mov w4, 1
   str w4, [x1]
 
