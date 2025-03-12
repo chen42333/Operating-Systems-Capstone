@@ -10,7 +10,6 @@
 
 extern void *dtb_addr;
 extern void exec_prog();
-extern void core_timer_enable();
 
 void mem_alloc()
 {

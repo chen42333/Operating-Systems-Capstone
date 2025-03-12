@@ -22,6 +22,7 @@ endif
 TARGET_FILE = $(KERNEL_TARGET)
 ifeq ($(TARGET),bootloader)
 	TARGET_FILE = $(BOOTLOADER_TARGET)
+	CFLAGS += -DUART_SYNC
 endif
 
 LIB = lib
@@ -56,22 +57,29 @@ CFLAGS += -Iinclude/$(TARGET) -Iinclude/$(LIB)
 .PRECIOUS: %.elf
 
 kernel: $(TARGET_FILE) $(RAMDISK)
+	rm $(SRC_DIR)/$(LIB)/*.o
 
 bootloader: $(TARGET_FILE)
+	rm $(SRC_DIR)/$(LIB)/*.o
 
 test: $(TARGET_FILE) $(RAMDISK)
+	rm $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio
 
 debug: $(TARGET_FILE) $(RAMDISK)
+	rm $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio -S -s
 
 test-pty: $(TARGET_FILE) $(RAMDISK)
+	rm $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial pty
 	
 test-asm: $(TARGET_FILE) $(RAMDISK)
+	rm $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d in_asm
 
 test-int: $(TARGET_FILE) $(RAMDISK)
+	rm $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d int
 
 $(RAMDISK): $(RAMDISK_FILES) $(TEST_PROG).img

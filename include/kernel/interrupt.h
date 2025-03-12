@@ -2,17 +2,10 @@
 #define __INTERRUPT_H
 
 #include <stdint.h>
+#include "ring_buf.h"
 
 #define CORE0_TIMER_IRQ_CTRL (void*)0x40000040
 #define TIMER_QUEUE_LEN 128
-
-struct timer_queue_element
-{
-    void (*handler)(void*);
-    uint64_t cur_ticks;
-    uint64_t duration_ticks;
-    void *data;
-};
 
 struct t_q 
 {

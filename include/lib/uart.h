@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include "utils.h"
 
+#ifndef UART_SYNC
+#include "ring_buf.h"
+#endif
+
 #define GPFSEL1 (void*)0x3f200004
 #define GPPUD (void*)0x3f200094
 #define GPPUDCLK0 (void*)0x3f200098
@@ -22,64 +26,16 @@
 #define STRING_MODE 0
 #define RAW_MODE 1
 
-#define IO_SYNC 0
-#define IO_ASYNC 1
-
-#define BUFLEN 512
-
-struct ring_buf
-{
-    int producer_idx;
-    int consumer_idx;
-    char buf[BUFLEN];
-};
-
-extern struct ring_buf r_buf, w_buf;
-
+#ifndef UART_SYNC
 void enable_uart_int();
+#endif
+
 void uart_init();
 int uart_write_char(char c);
 int uart_write_string(char *str);
 int uart_write_hex(uint64_t num, uint32_t size);
 int uart_write_dec(uint64_t num);
 int uart_read(char *str, uint32_t size, int mode);
-
-inline static void ring_buf_init(struct ring_buf *rb)
-{
-    rb->producer_idx = 0; // The next position to put
-    rb->consumer_idx = 0; // The next position to read
-}
-
-inline static bool ring_buf_full(struct ring_buf *rb)
-{
-    // Wasting 1 byte to differentiate empty/full
-    return (rb->producer_idx + 1) % sizeof(rb->buf) == rb->consumer_idx;
-}
-
-inline static bool ring_buf_empty(struct ring_buf *rb)
-{
-    return rb->producer_idx == rb->consumer_idx;
-}
-
-inline static void ring_buf_produce(struct ring_buf *rb, char c)
-{
-    while (ring_buf_full(rb)) ;
-
-    rb->buf[rb->producer_idx++] = c;
-    rb->producer_idx %= sizeof(rb->buf);
-}
-
-inline static char ring_buf_consume(struct ring_buf *rb)
-{
-    char ret;
-
-    while (ring_buf_empty(rb)) ;
-
-    ret = rb->buf[rb->consumer_idx++];
-    rb->consumer_idx %= sizeof(rb->buf);
-
-    return ret;
-}
 
 inline static int uart_write_newline()
 {

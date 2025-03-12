@@ -4,6 +4,7 @@
 #include "interrupt.h"
 
 struct t_q timer_queue;
+extern struct ring_buf r_buf, w_buf;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 {
@@ -100,15 +101,6 @@ void core_timer_enable()
     asm volatile ("msr cntp_ctl_el0, %0" :: "r"((uint64_t)1)); // enable timer
     init_timer_queue();
     set32(CORE0_TIMER_IRQ_CTRL, 2); // unmask timer interrupt
-
-    /*
-    mov x0, 1
-    msr cntp_ctl_el0, x0 // enable
-    bl init_timer_queue
-    mov x0, 2
-    ldr x1, =CORE0_TIMER_IRQ_CTRL
-    str w0, [x1] // unmask timer interrupt
-    */
 }
 
 void exception_entry()
@@ -133,7 +125,7 @@ void tx_int()
 {
     char c;
 
-    c = ring_buf_consume(&w_buf);
+    ring_buf_consume(&w_buf, &c, CHAR);
     set8(AUX_MU_IO_REG, c);
     
     if (ring_buf_empty(&w_buf))
@@ -145,7 +137,7 @@ void rx_int()
     char c;
 
     c = get8(AUX_MU_IO_REG);
-    ring_buf_produce(&r_buf, c);
+    ring_buf_produce(&r_buf, &c, CHAR);
 }
 
 int set_timeout()

@@ -1,8 +1,8 @@
 #include "utils.h"
 #include "uart.h"
 
+#ifndef UART_SYNC
 struct ring_buf r_buf, w_buf;
-int io_mode = IO_SYNC;
 
 void enable_uart_int()
 {
@@ -16,15 +16,13 @@ void enable_uart_int()
     set32(IRQs1, data);
 
     // Initialize read/write buffer
-    ring_buf_init(&r_buf);
-    ring_buf_init(&w_buf);
+    ring_buf_init(&r_buf, CHAR);
+    ring_buf_init(&w_buf, CHAR);
 
     // Enable interrupt in EL1
     asm volatile("msr daifclr, 0xf");
-
-    // IO after this line will be asynchronous
-    io_mode = IO_ASYNC;
 }
+#endif
 
 void uart_init()
 {
@@ -58,16 +56,13 @@ void uart_init()
 
 int uart_write_char(char c)
 {
-    if (io_mode == IO_SYNC)
-    {
-        while (!(get32(AUX_MU_LSR_REG) & (1 << 5))) ;
-        set8(AUX_MU_IO_REG, c);
-    }
-    else if (io_mode == IO_ASYNC)
-    {
-        ring_buf_produce(&w_buf, c);
-        enable_write_int();
-    }
+#ifdef UART_SYNC
+    while (!(get32(AUX_MU_LSR_REG) & (1 << 5))) ;
+    set8(AUX_MU_IO_REG, c);
+#else
+    ring_buf_produce(&w_buf, &c, CHAR);
+    enable_write_int();
+#endif
 
     return 0;
 }
@@ -123,18 +118,18 @@ int uart_read(char *str, uint32_t size, int mode)
     int i;
     char c;
 
-    if (io_mode == IO_ASYNC)
-        enable_read_int();
+#ifndef UART_SYNC
+    enable_read_int();
+#endif
 
     for (i = 0; i < size - 1; i++)
     {
-        if (io_mode == IO_SYNC)
-        {
-            while (!(get32(AUX_MU_LSR_REG) & 1)) ;
-            c = get8(AUX_MU_IO_REG);
-        }
-        else if (io_mode == IO_ASYNC)
-            c = ring_buf_consume(&r_buf);
+#ifdef UART_SYNC
+        while (!(get32(AUX_MU_LSR_REG) & 1)) ;
+        c = get8(AUX_MU_IO_REG);
+#else
+        ring_buf_consume(&r_buf, &c, CHAR);
+#endif
         
         if (mode == RAW_MODE)
             str[i] = c;
@@ -170,19 +165,19 @@ int uart_read(char *str, uint32_t size, int mode)
 
     if (mode == RAW_MODE)
     {
-        if (io_mode == IO_SYNC)
-        {
-            while (!(get32(AUX_MU_LSR_REG) & 1)) ;
-            str[i] = get8(AUX_MU_IO_REG);
-        }
-        else if (io_mode == IO_ASYNC)
-            str[i] = ring_buf_consume(&r_buf);
+#ifdef UART_SYNC
+    while (!(get32(AUX_MU_LSR_REG) & 1)) ;
+    str[i] = get8(AUX_MU_IO_REG);
+#else
+    ring_buf_consume(&r_buf, &str[i], CHAR);
+#endif
     }
     else if (mode == STRING_MODE)
         str[i] = '\0';
 
-    if (io_mode == IO_ASYNC)
-        disable_read_int();
+#ifndef UART_SYNC
+    disable_read_int();
+#endif
 
     return i;
 }
