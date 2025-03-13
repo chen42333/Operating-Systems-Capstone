@@ -30,9 +30,13 @@ void ls()
     }
 }
 
-void cat()
+int cat(char *filename)
 {
     void *addr = ramdisk_addr;
+
+    if (filename == NULL)
+        return -1;
+        
     while (true)
     {
         struct cpio_record *record = (struct cpio_record*)addr;
@@ -40,19 +44,16 @@ void cat()
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
 
         if (!strcmp("TRAILER!!!", record->payload))
-            break;
+            return -1;
 
-        if (!strcmp("./file1", record->payload))
+        if (path_size >= strlen("./") + 1 && !strcmp(filename, record->payload + 2))
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
 
-            uart_write_string("Filename: ");
-            uart_write_string(record->payload + 2);
-            uart_write_newline();
             uart_write_string(record->payload + offset);
             uart_write_newline();
 
-            break;
+            return 0;
         }
 
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);

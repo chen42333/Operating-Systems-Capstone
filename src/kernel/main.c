@@ -77,8 +77,11 @@ int main(void *_dtb_addr)
             reset(1);
         else if (!strcmp("ls", cmd))
             ls();
-        else if (!strcmp("cat", cmd))
-            cat();
+        else if (!strcmp("cat", strtok(cmd, " ")))
+        {
+            if (cat(strtok(NULL, "")) < 0)
+                uart_write_string("File not found\r\n");
+        }
         else if (!strcmp("memAlloc", cmd))
             mem_alloc();
         else if (!strcmp("ldProg", cmd))
@@ -86,7 +89,7 @@ int main(void *_dtb_addr)
             load_prog();
             exec_prog();
         }
-        else if (!strcmp(strtok(cmd, " "), "setTimeout"))
+        else if (!strcmp("setTimeout", strtok(cmd, " ")))
         {
             if (set_timeout())
             {
