@@ -14,6 +14,7 @@ make bootloader
 ```
 3. Move these file  into SD card:
 - `bootloader.img`: bootloader image
+    - Or move `kernel8.img` rather then `bootloader.img` and remove the line `kernel=bootloader.img` in `config.txt`, to boot with the kernel image directly 
 - `initramfs.cpio`: ramdisk cpio archive
 - `bcm2710-rpi-3-b-plus.dtb`: flattened devicetree
 - `config.txt`: config file
