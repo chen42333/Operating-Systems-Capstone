@@ -43,7 +43,7 @@ void mem_alloc()
 
 int main(void *_dtb_addr)
 {
-    char cmd[STRLEN];
+    char cmd[STRLEN], *arg0;
 
     uart_init();
     clear_read_fifo();
@@ -59,7 +59,8 @@ int main(void *_dtb_addr)
     {
         uart_write_string("# ");
         uart_read(cmd, STRLEN, STRING_MODE);
-        if (!strcmp("help", cmd))
+        arg0 = strtok(cmd, " ");
+        if (!strcmp("help", arg0))
             uart_write_string("help\t: print this help menu\r\n"
                     "hello\t: print Hello World!\r\n"
                     "mailbox\t: print hardware's information\r\n"
@@ -69,32 +70,30 @@ int main(void *_dtb_addr)
                     "memAlloc: allocate data from the heap\r\n"
                     "ldProg\t: execute the specified program in the ramdisk\r\n"
                     "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n");
-        else if (!strcmp("hello", cmd))
+        else if (!strcmp("hello", arg0))
             uart_write_string("Hello World!\r\n");
-        else if (!strcmp("mailbox", cmd))
+        else if (!strcmp("mailbox", arg0))
             mailbox_info();
-        else if (!strcmp("reboot", cmd))
+        else if (!strcmp("reboot", arg0))
             reset(1);
-        else if (!strcmp("ls", cmd))
+        else if (!strcmp("ls", arg0))
             ls();
-        else if (!strcmp("cat", strtok(cmd, " ")))
+        else if (!strcmp("cat", arg0))
         {
             if (cat(strtok(NULL, "")) < 0)
                 uart_write_string("File not found\r\n");
         }
-        else if (!strcmp("memAlloc", cmd))
+        else if (!strcmp("memAlloc", arg0))
             mem_alloc();
-        else if (!strcmp("ldProg", cmd))
+        else if (!strcmp("ldProg", arg0))
         {
             load_prog();
             exec_prog();
         }
-        else if (!strcmp("setTimeout", strtok(cmd, " ")))
+        else if (!strcmp("setTimeout", arg0))
         {
             if (set_timeout())
-            {
                 uart_write_string("Invalid argument\r\n");
-            }
         }
         else
             uart_write_string("Invalid command\r\n");

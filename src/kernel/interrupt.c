@@ -147,7 +147,7 @@ int set_timeout()
 
     if ((msg = strtok(NULL, " ")) == NULL)
         return -1;
-    
+
     if ((sec_str = strtok(NULL, " ")) == NULL)
         return -1;
     

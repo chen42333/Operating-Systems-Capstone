@@ -1,6 +1,6 @@
 #include "string.h"
 
-static char strtok_buf[STRLEN];
+static char *strtok_str_ptr;
 static int strtok_idx = 0;
 static int strtok_len = -1;
 
@@ -71,7 +71,7 @@ char* strtok(char *str, char *delim)
     // Initialize
     if (str != NULL)
     {
-        strcpy(strtok_buf, str);
+        strtok_str_ptr = str;
         strtok_idx = 0;
         strtok_len = strlen(str) + 1;
     }
@@ -80,14 +80,14 @@ char* strtok(char *str, char *delim)
     {
         for (int j = 0; j <= strlen(delim); j++)
         {
-            if (strtok_buf[i] == delim[j])
+            if (strtok_str_ptr[i] == delim[j])
             {
                 int idx = strtok_idx;
 
-                strtok_buf[i] = '\0';
+                strtok_str_ptr[i] = '\0';
                 strtok_idx = i + 1;
 
-                return &strtok_buf[idx];
+                return &strtok_str_ptr[idx];
             }
         }
     }
