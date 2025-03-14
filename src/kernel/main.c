@@ -50,6 +50,8 @@ int main(void *_dtb_addr)
     clear_write_fifo();
     enable_uart_int();
 
+    task_queue_init();
+
     core_timer_enable();
 
     dtb_addr = _dtb_addr;

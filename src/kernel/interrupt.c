@@ -3,7 +3,7 @@
 #include "mem.h"
 #include "interrupt.h"
 
-struct ring_buf timer_queue;
+struct ring_buf timer_queue, task_queue;
 extern struct ring_buf r_buf, w_buf;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
@@ -24,7 +24,7 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
     element.data = data;
     ring_buf_produce(&timer_queue, &element, TIMER);
 
-    for (; idx >= timer_queue.consumer_idx; idx--)
+    for (; ; idx--)
     {
 
         if (idx == timer_queue.consumer_idx)
@@ -45,26 +45,48 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
         }
         else
             break;
+
+        if (idx == 0)
+            idx += BUFLEN;
     }
 }
 
-void process_timer()
+
+void timer_int()
 {
-    uint64_t count, ival;
-    struct timer_queue_element element, *next_element_ptr;
+    struct task_queue_element element;
+
+    disable_timer_int();
+    element.handler = process_timer;
+    element.data = simple_malloc(sizeof(struct timer_queue_element));
 
     if (ring_buf_empty(&timer_queue)) // The timer queue is empty (should not happen)
         return;
-    
-    ring_buf_consume(&timer_queue, &element, TIMER);
+
+    ring_buf_consume(&timer_queue, element.data, TIMER);
+    ring_buf_produce(&task_queue, &element, TASK);
+
+    process_task();
+}
+
+void process_timer(void *data)
+{
+    uint64_t count, ival;
+    struct timer_queue_element *element_ptr, *next_element_ptr;
+
+    element_ptr = (struct timer_queue_element*)data;
 
     // Program the next timer interrupt
-    next_element_ptr = &((struct timer_queue_element*)timer_queue.buf)[timer_queue.consumer_idx];
-    asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
-    ival = next_element_ptr->cur_ticks + next_element_ptr->duration_ticks - count;
-    asm volatile ("msr cntp_tval_el0, %0" :: "r"(ival));
+    if (!ring_buf_empty(&timer_queue))
+    {
+        next_element_ptr = &((struct timer_queue_element*)timer_queue.buf)[timer_queue.consumer_idx];
+        asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
+        ival = next_element_ptr->cur_ticks + next_element_ptr->duration_ticks - count;
+        asm volatile ("msr cntp_tval_el0, %0" :: "r"(ival));
+    }
 
-    element.handler(element.data);
+    element_ptr->handler(element_ptr->data);
+    enable_timer_int();
 }
 
 void elasped_time(void* data)
@@ -96,7 +118,7 @@ void init_timer_queue()
 
 void core_timer_enable()
 {
-    asm volatile ("msr cntp_ctl_el0, %0" :: "r"((uint64_t)1)); // enable timer
+    enable_timer_int();
     init_timer_queue();
     set32(CORE0_TIMER_IRQ_CTRL, 2); // unmask timer interrupt
 }
@@ -119,23 +141,56 @@ void exception_entry()
     uart_write_newline();
 }
 
+void process_task()
+{
+    struct task_queue_element element;
+
+    if (ring_buf_empty(&task_queue))
+        return;
+    
+    ring_buf_consume(&task_queue, &element, TASK);
+    asm volatile ("msr DAIFClr, 0b10"); // Enable interrupt
+    element.handler(element.data);
+}
+
+void tx_int_task(void *data)
+{
+    set8(AUX_MU_IO_REG, *(char*)data);
+    
+    if (!ring_buf_empty(&w_buf))
+        enable_write_int();
+}
+
 void tx_int()
 {
-    char c;
+    struct task_queue_element element;
 
-    ring_buf_consume(&w_buf, &c, CHAR);
-    set8(AUX_MU_IO_REG, c);
-    
-    if (ring_buf_empty(&w_buf))
-        disable_write_int();
+    disable_write_int();
+    element.handler = tx_int_task;
+    element.data = simple_malloc(sizeof(char));
+    ring_buf_consume(&w_buf, (char*)element.data, CHAR);
+    ring_buf_produce(&task_queue, &element, TASK);
+
+    process_task();
+}
+
+void rx_int_task(void *data)
+{
+    ring_buf_produce(&r_buf, (char*)data, CHAR);
+    enable_read_int();
 }
 
 void rx_int()
 {
-    char c;
+    struct task_queue_element element;
 
-    c = get8(AUX_MU_IO_REG);
-    ring_buf_produce(&r_buf, &c, CHAR);
+    disable_read_int();
+    element.handler = rx_int_task;
+    element.data = simple_malloc(sizeof(char));
+    *(char*)element.data = get8(AUX_MU_IO_REG);
+    ring_buf_produce(&task_queue, &element, TASK);
+
+    process_task();
 }
 
 int set_timeout()
