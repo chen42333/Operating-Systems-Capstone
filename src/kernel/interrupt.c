@@ -3,6 +3,10 @@
 #include "mem.h"
 #include "interrupt.h"
 
+// For test preemption
+// #define BLOCK_READ
+// #define BLOCK_TIMER
+
 struct ring_buf timer_queue, task_queue;
 extern struct ring_buf r_buf, w_buf;
 static enum prio cur_priority = INIT_PRIO;
@@ -138,6 +142,9 @@ void elasped_time(void* data)
     add_timer(elasped_time, 2 * freq, NULL);
     uart_write_dec(count / freq);
     uart_write_string(" seconds after booting\r\n");
+#ifdef BLOCK_TIMER
+    // while (true) ; // For test preemption
+#endif
 }
 
 void print_msg(void *data)
@@ -190,8 +197,11 @@ void process_task(struct task_queue_element *task)
         element = *task;
     else 
     {
-        if (ring_buf_empty(&task_queue))
+        if (ring_buf_empty(&task_queue) || cur_priority < ((struct task_queue_element*)task_queue.buf)[task_queue.consumer_idx].priority)
+        {
+            asm volatile ("msr DAIFClr, 0b10"); // Enable interrupt
             return;
+        }    
         
         ring_buf_consume(&task_queue, &element, TASK);
     }
@@ -203,7 +213,7 @@ void process_task(struct task_queue_element *task)
 
     asm volatile ("msr DAIFSet, 0b10"); // Disable interrupt
     cur_priority = tmp; // Critical section
-    asm volatile ("msr DAIFClr, 0b10"); // Enable interrupt
+    process_task(NULL);
 }
 
 void tx_int_task(void *data)
@@ -228,6 +238,9 @@ void tx_int()
 
 void rx_int_task(void *data)
 {
+#ifdef BLOCK_READ
+    // while (true) ; // For test preemption
+#endif
     ring_buf_produce(&r_buf, (char*)data, CHAR);
     enable_read_int();
 }

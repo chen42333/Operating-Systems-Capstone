@@ -10,9 +10,9 @@
 extern struct ring_buf task_queue;
 
 enum prio {
-    TIMER_PRIO = 0,
-    READ_PRIO = 1,
-    WRITE_PRIO = 2,
+    WRITE_PRIO = 0,
+    TIMER_PRIO = 1,
+    READ_PRIO = 2,
     INIT_PRIO = INT_MAX
 };
 
