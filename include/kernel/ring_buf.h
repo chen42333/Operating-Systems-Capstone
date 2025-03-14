@@ -22,6 +22,7 @@ struct timer_queue_element
 struct task_queue_element
 {
     void (*handler)(void*);
+    uint32_t priority;
     void *data;
 };
 

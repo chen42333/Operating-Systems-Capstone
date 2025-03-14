@@ -5,6 +5,7 @@
 
 struct ring_buf timer_queue, task_queue;
 extern struct ring_buf r_buf, w_buf;
+static enum prio cur_priority = INIT_PRIO;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 {
@@ -26,6 +27,7 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 
     for (; ; idx--)
     {
+        int cmp_idx = (idx + BUFLEN - 1) % BUFLEN;
 
         if (idx == timer_queue.consumer_idx)
         {
@@ -34,14 +36,14 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
             break;
         }
         
-        if (count + duration < buf[idx - 1].cur_ticks + buf[idx - 1].duration_ticks)
+        if (count + duration < buf[cmp_idx].cur_ticks + buf[cmp_idx].duration_ticks)
         {
             // Move forward
             struct timer_queue_element tmp;
             
             tmp = buf[idx];
-            buf[idx] = buf[idx - 1];
-            buf[idx - 1] = tmp;
+            buf[idx] = buf[cmp_idx];
+            buf[cmp_idx] = tmp;
         }
         else
             break;
@@ -51,22 +53,60 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
     }
 }
 
-
-void timer_int()
+void add_task(void(*callback)(void*), enum prio priority, void *data)
 {
     struct task_queue_element element;
 
+    element.handler = callback;
+    element.priority = priority;
+    element.data = data;
+
+    if (priority < cur_priority) // Preempt
+        process_task(&element);
+    else
+    {
+        struct task_queue_element *buf = (struct task_queue_element*)task_queue.buf;
+        int idx = task_queue.producer_idx;
+
+        // Wait until the task queue is not full
+        while (ring_buf_full(&task_queue)) ;
+
+        ring_buf_produce(&task_queue, &element, TASK);
+
+        for (; idx != task_queue.consumer_idx; idx--)
+        {
+            int cmp_idx = (idx + BUFLEN - 1) % BUFLEN;
+            if (priority < buf[cmp_idx].priority)
+            {
+                // Move forward
+                struct task_queue_element tmp;
+                
+                tmp = buf[idx];
+                buf[idx] = buf[cmp_idx];
+                buf[cmp_idx] = tmp;
+            }
+            else
+                break;
+
+            if (idx == 0)
+                idx += BUFLEN;
+        }
+    }
+}
+
+void timer_int()
+{
+    struct timer_queue_element timer_data;
+
     disable_timer_int();
-    element.handler = process_timer;
-    element.data = simple_malloc(sizeof(struct timer_queue_element));
 
     if (ring_buf_empty(&timer_queue)) // The timer queue is empty (should not happen)
         return;
 
-    ring_buf_consume(&timer_queue, element.data, TIMER);
-    ring_buf_produce(&task_queue, &element, TASK);
+    ring_buf_consume(&timer_queue, &timer_data, TIMER);
+    add_task(process_timer, TIMER_PRIO, &timer_data);
 
-    process_task();
+    process_task(NULL);
 }
 
 void process_timer(void *data)
@@ -141,16 +181,29 @@ void exception_entry()
     uart_write_newline();
 }
 
-void process_task()
+void process_task(struct task_queue_element *task)
 {
     struct task_queue_element element;
+    enum prio tmp = cur_priority;
 
-    if (ring_buf_empty(&task_queue))
-        return;
+    if (task != NULL)
+        element = *task;
+    else 
+    {
+        if (ring_buf_empty(&task_queue))
+            return;
+        
+        ring_buf_consume(&task_queue, &element, TASK);
+    }
+
+    cur_priority = element.priority;
     
-    ring_buf_consume(&task_queue, &element, TASK);
     asm volatile ("msr DAIFClr, 0b10"); // Enable interrupt
     element.handler(element.data);
+
+    asm volatile ("msr DAIFSet, 0b10"); // Disable interrupt
+    cur_priority = tmp; // Critical section
+    asm volatile ("msr DAIFClr, 0b10"); // Enable interrupt
 }
 
 void tx_int_task(void *data)
@@ -163,15 +216,14 @@ void tx_int_task(void *data)
 
 void tx_int()
 {
-    struct task_queue_element element;
+    char write_data;
 
     disable_write_int();
-    element.handler = tx_int_task;
-    element.data = simple_malloc(sizeof(char));
-    ring_buf_consume(&w_buf, (char*)element.data, CHAR);
-    ring_buf_produce(&task_queue, &element, TASK);
 
-    process_task();
+    ring_buf_consume(&w_buf, &write_data, CHAR);
+    add_task(tx_int_task, WRITE_PRIO, &write_data);
+
+    process_task(NULL);
 }
 
 void rx_int_task(void *data)
@@ -182,15 +234,14 @@ void rx_int_task(void *data)
 
 void rx_int()
 {
-    struct task_queue_element element;
+    char read_data;
 
     disable_read_int();
-    element.handler = rx_int_task;
-    element.data = simple_malloc(sizeof(char));
-    *(char*)element.data = get8(AUX_MU_IO_REG);
-    ring_buf_produce(&task_queue, &element, TASK);
 
-    process_task();
+    read_data = get8(AUX_MU_IO_REG);
+    add_task(rx_int_task, READ_PRIO, &read_data);
+
+    process_task(NULL);
 }
 
 int set_timeout()
