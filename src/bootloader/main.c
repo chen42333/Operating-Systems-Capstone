@@ -14,6 +14,8 @@ int main(void *_dtb_addr)
         uint32_t magic, data_len, checksum;
         uint32_t sum = 0;
 
+        uart_write_string("Receiving kernel image...\r\n");
+
         uart_read(buf, 4, RAW_MODE);
         magic = *(uint32_t*)buf;
         uart_read(buf, 4, RAW_MODE);
