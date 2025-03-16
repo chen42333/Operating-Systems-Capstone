@@ -35,7 +35,7 @@ void mem_alloc()
     data = simple_malloc(size);
 
     if (data != NULL)
-        printf("Allocator test: The data allocated from the heap is: %p\r\n", data);
+        printf("Allocator test: The data allocated from the heap is: 0x%x\r\n", (uintptr_t)data);
 }
 
 void page_alloc()
@@ -64,7 +64,7 @@ void page_alloc()
     data = buddy_malloc(size);
 
     if (data != NULL)
-        printf("Allocator test: The pages allocated is from %p\r\n", data);
+        printf("Allocator test: The pages allocated are from 0x%x\r\n", (uintptr_t)data);
 }
 
 void page_free()
