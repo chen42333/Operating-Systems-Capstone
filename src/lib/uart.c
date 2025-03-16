@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "uart.h"
+#include "io.h"
 
 #ifndef UART_SYNC
 struct ring_buf r_buf, w_buf;
@@ -67,52 +68,6 @@ int uart_write_char(char c)
     return 0;
 }
 
-int uart_write_string(char *str)
-{
-    for (int i = 0; str[i] != '\0'; i++)
-       uart_write_char(str[i]);
-
-    return 0;
-}
-
-int uart_write_hex(uint64_t num, uint32_t size)
-{
-    char buf[size * 2 + 1];
-
-    uart_write_string("0x");
-    for (int i = size * 2 - 1; i >= 0 ; i--)
-    {
-        uint64_t byte = num % 16;
-        if (byte < 10)
-            buf[i] = byte + '0';
-        else
-            buf[i] = byte - 10 + 'a';
-        num >>= 4;
-    }
-    
-    buf[size * 2] = '\0';
-    uart_write_string(buf);
-
-    return 0;
-}
-
-int uart_write_dec(uint64_t num)
-{
-    char buf[21];
-    int i;
-
-    for (i = 0; num > 0; i++)
-    {
-        buf[i] = num % 10 + '0';
-        num /= 10;
-    }
-
-    for (i--; i >= 0; i--)
-        uart_write_char(buf[i]);
-
-    return 0;
-}
-
 int uart_read(char *str, uint32_t size, int mode)
 {
     int i;
@@ -140,14 +95,14 @@ int uart_read(char *str, uint32_t size, int mode)
                 if (i > 0)
                 {
                     i -= 2;
-                    uart_write_string("\b \b");
+                    printf("\b \b");
                 }
                 else
                     i--;
             }
             else if (c == '\r')
             {
-                uart_write_newline();
+                printf("\r\n");
                 break;
             }
             else if (c == '\0' || c == '\n')

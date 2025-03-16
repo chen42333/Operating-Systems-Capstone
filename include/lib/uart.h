@@ -32,15 +32,7 @@ void enable_uart_int();
 
 void uart_init();
 int uart_write_char(char c);
-int uart_write_string(char *str);
-int uart_write_hex(uint64_t num, uint32_t size);
-int uart_write_dec(uint64_t num);
 int uart_read(char *str, uint32_t size, int mode);
-
-inline static int uart_write_newline()
-{
-    return uart_write_string("\r\n");
-}
 
 inline static void enable_read_int()
 {
@@ -94,13 +86,6 @@ inline static void clear_write_fifo()
     data = get32(AUX_MU_IIR_REG);
     data |= 0b100;
     set32(AUX_MU_IIR_REG, data);
-}
-
-inline static void err(char *str)
-{
-    uart_write_string("Error:\t");
-    uart_write_string(str);
-    return;
 }
 
 #endif

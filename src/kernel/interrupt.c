@@ -2,6 +2,7 @@
 #include "string.h"
 #include "mem.h"
 #include "interrupt.h"
+#include "io.h"
 
 // For test exception and interrupt handler
 // #define TEST_EXCEPTION
@@ -145,8 +146,7 @@ void elasped_time(void* data)
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
     add_timer(elasped_time, 2 * freq, NULL);
 #ifdef TEST_INT
-    uart_write_dec(count / freq);
-    uart_write_string(" seconds after booting\r\n");
+    printf("%d seconds after booting\r\n", count / freq);
 #endif
 #ifdef BLOCK_TIMER
     // while (true) ; // For test preemption
@@ -155,8 +155,7 @@ void elasped_time(void* data)
 
 void print_msg(void *data)
 {
-    uart_write_string((char*)data);
-    uart_write_newline();
+    printf("%s\r\n", data);
 }
 
 void init_timer_queue()
@@ -180,20 +179,14 @@ void exception_entry()
 {
 #ifdef TEST_EXCEPTION
 
-    uint64_t value;
+    void *value;
 
     asm volatile ("mrs %0, spsr_el1" : "=r"(value));
-    uart_write_string("SPSR_EL1: ");
-    uart_write_hex(value, sizeof(uint64_t));
-    uart_write_newline();
+    printf("SPSR_EL1: 0x%x\r\n", value);
     asm volatile ("mrs %0, elr_el1" : "=r"(value));
-    uart_write_string("ELR_EL1: ");
-    uart_write_hex(value, sizeof(uint64_t));
-    uart_write_newline();
+    printf("ELR_EL1: 0x%x\r\n", value);
     asm volatile ("mrs %0, esr_el1" : "=r"(value));
-    uart_write_string("ESR_EL1: ");
-    uart_write_hex(value, sizeof(uint64_t));
-    uart_write_newline();
+    printf("ESR_EL1: 0x%x\r\n", value);
 
 #endif
 }

@@ -1,6 +1,7 @@
 #include "device_tree.h"
 #include "uart.h"
 #include "utils.h"
+#include "io.h"
 
 void *dtb_addr;
 
@@ -12,7 +13,9 @@ void fdt_traverse(int (*func)(void*, char*))
     bool end = false;
     
     if (big2host(hdr->magic) != 0xd00dfeed)
+    {
         err("Invalid .dtb file\r\n");
+    }
 
     p = dtb_addr + big2host(hdr->off_dt_struct);
 

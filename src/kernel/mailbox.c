@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "uart.h"
 #include "mailbox.h"
+#include "io.h"
 
 static void mailbox_call(uint32_t *mailbox)
 {
@@ -37,9 +38,7 @@ static void get_board_revision()
     uint32_t data[n_buf];
     mailbox_request(n_buf, GET_BOARD_REVISION, data);
 
-    uart_write_string("Board revision: ");
-    uart_write_hex(data[0], sizeof(uint32_t));
-    uart_write_newline();
+    printf("Board revision: 0x%x\r\n", data[0]);
 }
 
 static void get_memory_info()
@@ -48,17 +47,13 @@ static void get_memory_info()
     uint32_t data[n_buf];
     mailbox_request(2, GET_ARM_MEMORY, data);
 
-    uart_write_string("ARM memory base address: ");
-    uart_write_hex(data[0], sizeof(uint32_t));
-    uart_write_newline();
-    uart_write_string("ARM memory size: ");
-    uart_write_hex(data[1], sizeof(uint32_t));
-    uart_write_newline();
+    printf("ARM memory base address: 0x%x\r\n", data[0]);
+    printf("ARM memory size: 0x%x\r\n", data[1]);
 }
 
 void mailbox_info()
 {
-    uart_write_string("Mailbox info:\r\n");
+    printf("Mailbox info:\r\n");
     get_board_revision();
     get_memory_info();
     return;

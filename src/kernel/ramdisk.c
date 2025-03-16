@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "device_tree.h"
 #include "string.h"
+#include "io.h"
 
 void *ramdisk_addr;
 int idx = 0;
@@ -20,10 +21,9 @@ void ls()
             break;
         
         if (!strcmp(".", record->payload))
-            uart_write_string(record->payload);
+            printf("%s\r\n", record->payload);
         else
-            uart_write_string(record->payload + 2);
-        uart_write_newline();
+            printf("%s\r\n", record->payload + 2);
 
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
         addr += ((file_size + 3) & ~3);
@@ -50,8 +50,7 @@ int cat(char *filename)
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
 
-            uart_write_string(record->payload + offset);
-            uart_write_newline();
+            printf("%s\r\n", record->payload + offset);
 
             return 0;
         }

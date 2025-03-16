@@ -1,7 +1,6 @@
 #include "mem.h"
 #include "uart.h"
-
-static void *heap_ptr = _ebss;
+#include "io.h"
 
 void memcpy(void *dst, void *src, uint32_t size)
 {
@@ -10,6 +9,8 @@ void memcpy(void *dst, void *src, uint32_t size)
     for (int i = 0; i < size; i++)
         *d++ = *s++;
 }
+
+static void *heap_ptr = _ebss;
 
 void* simple_malloc(size_t size)
 {
@@ -35,7 +36,7 @@ void* simple_malloc(size_t size)
         return ret;
     }
 
-    uart_write_string("Allocation failed\r\n");
+    printf("Allocation failed\r\n");
     
     return NULL;
 }

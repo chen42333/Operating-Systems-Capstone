@@ -7,6 +7,7 @@
 #include "ramdisk.h"
 #include "device_tree.h"
 #include "interrupt.h"
+#include "io.h"
 
 extern void *dtb_addr;
 extern void exec_prog();
@@ -17,7 +18,7 @@ void mem_alloc()
     size_t size;
     void *data;
 
-    uart_write_string("Size: ");
+    printf("Size: ");
     uart_read(sz, STRLEN, STRING_MODE);
 
     if (sz[0] == '0' && (sz[1] == 'x' || sz[1] == 'X'))
@@ -27,18 +28,14 @@ void mem_alloc()
 
     if (size == 0)
     {
-        uart_write_string("Invalid number\r\n");
+        printf("Invalid number\r\n");
         return;
     }
 
     data = simple_malloc(size);
 
     if (data != NULL)
-    {
-        uart_write_string("Allocator test: The data allocated from the heap is: ");
-        uart_write_hex((uintptr_t)data, sizeof(uint64_t));
-        uart_write_newline();
-    }
+        printf("Allocator test: The data allocated from the heap is: %p\r\n", data);
 }
 
 int main(void *_dtb_addr)
@@ -59,11 +56,11 @@ int main(void *_dtb_addr)
     
     while (true)
     {
-        uart_write_string("# ");
+        printf("# ");
         uart_read(cmd, STRLEN, STRING_MODE);
         arg0 = strtok(cmd, " ");
         if (!strcmp("help", arg0))
-            uart_write_string("help\t: print this help menu\r\n"
+            printf("help\t: print this help menu\r\n"
                     "hello\t: print Hello World!\r\n"
                     "mailbox\t: print hardware's information\r\n"
                     "reboot\t: reboot the device\r\n"
@@ -73,7 +70,7 @@ int main(void *_dtb_addr)
                     "ldProg\t: execute the specified program in the ramdisk\r\n"
                     "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n");
         else if (!strcmp("hello", arg0))
-            uart_write_string("Hello World!\r\n");
+            printf("Hello World!\r\n");
         else if (!strcmp("mailbox", arg0))
             mailbox_info();
         else if (!strcmp("reboot", arg0))
@@ -83,7 +80,7 @@ int main(void *_dtb_addr)
         else if (!strcmp("cat", arg0))
         {
             if (cat(strtok(NULL, "")) < 0)
-                uart_write_string("File not found\r\n");
+                printf("File not found\r\n");
         }
         else if (!strcmp("memAlloc", arg0))
             mem_alloc();
@@ -95,10 +92,10 @@ int main(void *_dtb_addr)
         else if (!strcmp("setTimeout", arg0))
         {
             if (set_timeout())
-                uart_write_string("Invalid argument\r\n");
+                printf("Invalid argument\r\n");
         }
         else
-            uart_write_string("Invalid command\r\n");
+            printf("Invalid command\r\n");
     }
     return 0;
 }
