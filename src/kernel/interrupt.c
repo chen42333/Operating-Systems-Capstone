@@ -139,19 +139,17 @@ void process_timer(void *data)
 
 void elasped_time(void* data)
 {
-#ifdef TEST_INT
-
     uint64_t count, freq;
 
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
     add_timer(elasped_time, 2 * freq, NULL);
+#ifdef TEST_INT
     uart_write_dec(count / freq);
     uart_write_string(" seconds after booting\r\n");
+#endif
 #ifdef BLOCK_TIMER
     // while (true) ; // For test preemption
-#endif
-
 #endif
 }
 
