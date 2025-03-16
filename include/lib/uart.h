@@ -32,6 +32,7 @@ void enable_uart_int();
 
 void uart_init();
 int uart_write_char(char c);
+int uart_write_string(char *str);
 int uart_read(char *str, uint32_t size, int mode);
 
 inline static void enable_read_int()
