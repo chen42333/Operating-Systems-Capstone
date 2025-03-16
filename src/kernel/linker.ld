@@ -28,6 +28,8 @@ SECTIONS
   } > MEM
 
   _estack = 0x100000;
-  _sprog = 0x110000;
-  _eprog_stack = 0x180000;
+  _sprog = 0x100000;
+  _eprog_stack = 0x120000;
+  _sbrk = 0x180000;
+  _ebrk = 0x200000;
 }
