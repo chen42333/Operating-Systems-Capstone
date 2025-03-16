@@ -57,29 +57,29 @@ CFLAGS += -Iinclude/$(TARGET) -Iinclude/$(LIB)
 .PRECIOUS: %.elf
 
 kernel: $(TARGET_FILE) $(RAMDISK)
-	rm $(SRC_DIR)/$(LIB)/*.o
+	rm -r $(SRC_DIR)/$(LIB)/*.o
 
 bootloader: $(TARGET_FILE)
-	rm $(SRC_DIR)/$(LIB)/*.o
+	rm -r $(SRC_DIR)/$(LIB)/*.o
 
 test: $(TARGET_FILE) $(RAMDISK)
-	rm $(SRC_DIR)/$(LIB)/*.o
+	rm -r $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio
 
 debug: $(TARGET_FILE) $(RAMDISK)
-	rm $(SRC_DIR)/$(LIB)/*.o
+	rm -r $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio -S -s
 
 test-pty: $(TARGET_FILE) $(RAMDISK)
-	rm $(SRC_DIR)/$(LIB)/*.o
+	rm -r $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial pty
 	
 test-asm: $(TARGET_FILE) $(RAMDISK)
-	rm $(SRC_DIR)/$(LIB)/*.o
+	rm -r $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d in_asm
 
 test-int: $(TARGET_FILE) $(RAMDISK)
-	rm $(SRC_DIR)/$(LIB)/*.o
+	rm -r $(SRC_DIR)/$(LIB)/*.o
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d int
 
 $(RAMDISK): $(RAMDISK_FILES) $(TEST_PROG).img
