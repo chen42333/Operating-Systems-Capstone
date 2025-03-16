@@ -1,7 +1,7 @@
 #include "device_tree.h"
 #include "uart.h"
 #include "utils.h"
-#include "io.h"
+#include "printf.h"
 
 void *dtb_addr;
 

@@ -1,6 +1,6 @@
 #include "mem.h"
 #include "uart.h"
-#include "io.h"
+#include "printf.h"
 
 void memcpy(void *dst, void *src, uint32_t size)
 {

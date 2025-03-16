@@ -2,7 +2,7 @@
 #include "string.h"
 #include "mem.h"
 #include "interrupt.h"
-#include "io.h"
+#include "printf.h"
 
 // For test exception and interrupt handler
 // #define TEST_EXCEPTION

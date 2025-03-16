@@ -2,14 +2,14 @@
 #define __UTILS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define true 1
 #define false 0
-#define NULL 0
+#define NULL ((void*)0)
 #define INT_MAX 2147483647
 
-typedef uint64_t size_t; 
-typedef int bool;
+typedef uint64_t size_t;
 
 extern char _stext[];
 extern char _etext[];

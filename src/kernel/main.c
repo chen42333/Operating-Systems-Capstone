@@ -7,7 +7,7 @@
 #include "ramdisk.h"
 #include "device_tree.h"
 #include "interrupt.h"
-#include "io.h"
+#include "printf.h"
 
 extern void *dtb_addr;
 extern void exec_prog();
@@ -38,6 +38,54 @@ void mem_alloc()
         printf("Allocator test: The data allocated from the heap is: %p\r\n", data);
 }
 
+void page_alloc()
+{
+    char *sz = strtok(NULL, "");
+    size_t size;
+    void *data;
+
+    if (sz == NULL)
+    {
+        printf("Invalid argument\r\n");
+        return;
+    }
+
+    if (sz[0] == '0' && (sz[1] == 'x' || sz[1] == 'X'))
+        size = hstr2u32(sz + 2, strlen(sz + 2));
+    else
+        size = str2u32(sz, strlen(sz));
+
+    if (size == 0)
+    {
+        printf("Invalid number\r\n");
+        return;
+    }
+
+    data = buddy_malloc(size);
+
+    if (data != NULL)
+        printf("Allocator test: The pages allocated is from %p\r\n", data);
+}
+
+void page_free()
+{
+    char *str = strtok(NULL, "");
+    void *ptr;
+
+    if (str == NULL)
+    {
+        printf("Invalid argument\r\n");
+        return;
+    }
+
+    if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
+        ptr = (void*)(uintptr_t)hstr2u32(str + 2, strlen(str + 2));
+    else    
+        ptr = (void*)(uintptr_t)hstr2u32(str, strlen(str));
+    
+    buddy_free(ptr);
+}
+
 int main(void *_dtb_addr)
 {
     char cmd[STRLEN], *arg0;
@@ -50,6 +98,8 @@ int main(void *_dtb_addr)
     task_queue_init();
 
     core_timer_enable();
+
+    buddy_init();
 
     dtb_addr = _dtb_addr;
     fdt_traverse(initramfs_callback);
@@ -68,7 +118,9 @@ int main(void *_dtb_addr)
                     "cat\t: show the content of file1\r\n"
                     "memAlloc: allocate data from the heap\r\n"
                     "ldProg\t: execute the specified program in the ramdisk\r\n"
-                    "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n");
+                    "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n"
+                    "pageAlloc <num>\t: allocate <num> pages\r\n"
+                    "pageFree <ptr>\t: free pages from <ptr>\r\n");
         else if (!strcmp("hello", arg0))
             printf("Hello World!\r\n");
         else if (!strcmp("mailbox", arg0))
@@ -94,6 +146,10 @@ int main(void *_dtb_addr)
             if (set_timeout())
                 printf("Invalid argument\r\n");
         }
+        else if (!strcmp("pageAlloc", arg0))
+            page_alloc();
+        else if (!strcmp("pageFree", arg0))
+            page_free();
         else
             printf("Invalid command\r\n");
     }

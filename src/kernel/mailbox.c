@@ -1,7 +1,7 @@
 #include "utils.h"
 #include "uart.h"
 #include "mailbox.h"
-#include "io.h"
+#include "printf.h"
 
 static void mailbox_call(uint32_t *mailbox)
 {

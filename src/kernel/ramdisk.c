@@ -3,7 +3,7 @@
 #include "utils.h"
 #include "device_tree.h"
 #include "string.h"
-#include "io.h"
+#include "printf.h"
 
 void *ramdisk_addr;
 int idx = 0;
