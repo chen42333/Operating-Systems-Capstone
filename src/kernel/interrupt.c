@@ -3,6 +3,10 @@
 #include "mem.h"
 #include "interrupt.h"
 
+// For test exception and interrupt handler
+// #define TEST_EXCEPTION
+// #define TEST_INT
+
 // For test preemption
 // #define BLOCK_READ
 // #define BLOCK_TIMER
@@ -135,6 +139,8 @@ void process_timer(void *data)
 
 void elasped_time(void* data)
 {
+#ifdef TEST_INT
+
     uint64_t count, freq;
 
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
@@ -144,6 +150,8 @@ void elasped_time(void* data)
     uart_write_string(" seconds after booting\r\n");
 #ifdef BLOCK_TIMER
     // while (true) ; // For test preemption
+#endif
+
 #endif
 }
 
@@ -172,6 +180,8 @@ void core_timer_enable()
 
 void exception_entry()
 {
+#ifdef TEST_EXCEPTION
+
     uint64_t value;
 
     asm volatile ("mrs %0, spsr_el1" : "=r"(value));
@@ -186,6 +196,8 @@ void exception_entry()
     uart_write_string("ESR_EL1: ");
     uart_write_hex(value, sizeof(uint64_t));
     uart_write_newline();
+
+#endif
 }
 
 void process_task(struct task_queue_element *task)
