@@ -8,6 +8,7 @@
 #define CORE0_TIMER_IRQ_CTRL (void*)0x40000040
 
 extern struct ring_buf task_queue;
+extern struct task_queue_element task_queue_buf[BUFLEN];
 
 enum prio {
     WRITE_PRIO = 0,
@@ -44,7 +45,7 @@ inline static void disable_timer_int()
 
 inline static void task_queue_init()
 {
-    ring_buf_init(&task_queue, TASK);
+    ring_buf_init(&task_queue, task_queue_buf);
 }
 
 #endif

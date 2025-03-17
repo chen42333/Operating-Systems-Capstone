@@ -33,25 +33,11 @@ struct ring_buf
     void *buf;
 };
 
-inline static void ring_buf_init(struct ring_buf *rb, enum buf_type type)
+inline static void ring_buf_init(struct ring_buf *rb, void *buf_ptr)
 {
     rb->producer_idx = 0; // The next position to put
     rb->consumer_idx = 0; // The next position to read
-
-    switch (type)
-    {
-        case CHAR:
-            rb->buf = simple_malloc(sizeof(char) * BUFLEN);
-            break;
-        case TIMER:
-            rb->buf = simple_malloc(sizeof(struct timer_queue_element) * BUFLEN);
-            break;
-        case TASK:
-            rb->buf = simple_malloc(sizeof(struct task_queue_element) * BUFLEN);
-            break;
-        default:
-            break;
-    }
+    rb->buf = buf_ptr;
 }
 
 inline static bool ring_buf_full(struct ring_buf *rb)

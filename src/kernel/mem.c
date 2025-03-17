@@ -117,9 +117,6 @@ void buddy_init()
         buddy_data.free_blocks_list[i] = NULL;
 
     buddy_insert_free_block(0, NUM_PAGES_EXP);
-
-    printf("_sbrk %p\r\n_ebrk %p\r\n", _sbrk, _ebrk);
-    printf("_stext %p\r\n_etext %p\r\n", _stext, _etext);
 }
 
 void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)

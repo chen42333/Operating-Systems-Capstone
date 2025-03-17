@@ -3,6 +3,7 @@
 #include "printf.h"
 
 struct ring_buf r_buf, w_buf;
+char read_buf[BUFLEN], write_buf[BUFLEN];
 
 void enable_uart_int()
 {
@@ -16,8 +17,8 @@ void enable_uart_int()
     set32(IRQs1, data);
 
     // Initialize read/write buffer
-    ring_buf_init(&r_buf, CHAR);
-    ring_buf_init(&w_buf, CHAR);
+    ring_buf_init(&r_buf, read_buf);
+    ring_buf_init(&w_buf, write_buf);
 
     // Enable interrupt in EL1
     asm volatile("msr daifclr, 0xf");

@@ -13,6 +13,8 @@
 // #define BLOCK_TIMER
 
 struct ring_buf timer_queue, task_queue;
+struct timer_queue_element timer_queue_buf[BUFLEN];
+struct task_queue_element task_queue_buf[BUFLEN];
 extern struct ring_buf r_buf, w_buf;
 static enum prio cur_priority = INIT_PRIO;
 
@@ -162,7 +164,7 @@ void init_timer_queue()
 {
     uint64_t freq;
 
-    ring_buf_init(&timer_queue, TIMER);
+    ring_buf_init(&timer_queue, timer_queue_buf);
 
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
     add_timer(elasped_time, freq * 2, NULL);
