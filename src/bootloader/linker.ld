@@ -19,6 +19,7 @@ SECTIONS
   .data ALIGN(8): { 
     _sdata = .;
     *(.data) 
+    . = ALIGN(8);
     _edata = .;
   } > MEM
   .bss ALIGN(8): { 
