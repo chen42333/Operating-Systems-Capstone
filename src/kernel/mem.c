@@ -117,6 +117,9 @@ void buddy_init()
         buddy_data.free_blocks_list[i] = NULL;
 
     buddy_insert_free_block(0, NUM_PAGES_EXP);
+
+    printf("_sbrk %p\r\n_ebrk %p\r\n", _sbrk, _ebrk);
+    printf("_stext %p\r\n_etext %p\r\n", _stext, _etext);
 }
 
 void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
@@ -208,17 +211,4 @@ void buddy_free(void *ptr)
 
     buddy_insert_free_block(idx, list_idx);
     buddy_merge_block(idx, list_idx);
-
-
-
-for (int i = 0; i <= NUM_PAGES_EXP; i++)
-{
-    struct node *tmp = buddy_data.free_blocks_list[i];
-    printf("List of size %u:\r\n", 1 << i);
-    while (tmp != NULL)
-    {
-        printf("\tidx %d\r\n", tmp->idx);
-        tmp = tmp->next;
-    }
-}
 }

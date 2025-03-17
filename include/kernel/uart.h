@@ -3,10 +3,7 @@
 
 #include <stdint.h>
 #include "utils.h"
-
-#ifndef UART_SYNC
 #include "ring_buf.h"
-#endif
 
 #define GPFSEL1 (void*)0x3f200004
 #define GPPUD (void*)0x3f200094
@@ -23,17 +20,11 @@
 #define AUX_MU_IO_REG (void*)0x3f215040
 #define IRQs1 (void*)0x3f00b210
 
-#define STRING_MODE 0
-#define RAW_MODE 1
 
-#ifndef UART_SYNC
 void enable_uart_int();
-#endif
-
 void uart_init();
 int uart_write_char(char c);
-int uart_write_string(char *str);
-int uart_read(char *str, uint32_t size, int mode);
+int uart_read_string(char *str, uint32_t size);
 
 inline static void enable_read_int()
 {

@@ -1,4 +1,4 @@
-#include "uart.h"
+#include "io.h"
 
 #define MAGIC 0x544f4f42
 
@@ -16,14 +16,14 @@ int main(void *_dtb_addr)
 
         uart_write_string("Receiving kernel image...\r\n");
 
-        uart_read(buf, 4, RAW_MODE);
+        uart_read_raw(buf, 4);
         magic = *(uint32_t*)buf;
-        uart_read(buf, 4, RAW_MODE);
+        uart_read_raw(buf, 4);
         data_len = *(uint32_t*)buf;
-        uart_read(buf, 4, RAW_MODE);
+        uart_read_raw(buf, 4);
         checksum = *(uint32_t*)buf;
 
-        uart_read(_skernel, data_len, RAW_MODE);
+        uart_read_raw(_skernel, data_len);
         
         for (int i = 0; i < data_len; i++)
             sum += (uint32_t)(unsigned char)_skernel[i];

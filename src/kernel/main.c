@@ -19,7 +19,7 @@ void mem_alloc()
     void *data;
 
     printf("Size: ");
-    uart_read(sz, STRLEN, STRING_MODE);
+    uart_read_string(sz, STRLEN);
 
     if (sz[0] == '0' && (sz[1] == 'x' || sz[1] == 'X'))
         size = hstr2u32(sz + 2, strlen(sz + 2));
@@ -107,7 +107,7 @@ int main(void *_dtb_addr)
     while (true)
     {
         printf("# ");
-        uart_read(cmd, STRLEN, STRING_MODE);
+        uart_read_string(cmd, STRLEN);
         arg0 = strtok(cmd, " ");
         if (!strcmp("help", arg0))
             printf("help\t: print this help menu\r\n"
