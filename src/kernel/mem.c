@@ -49,6 +49,8 @@ struct
     struct node *free_blocks_list[NUM_PAGES_EXP + 1];
 } static buddy_data;
 
+struct node node_arr[1 << NUM_PAGES_EXP];
+
 static void buddy_delete_free_block(int idx, int list_idx)
 {
     struct node *cur = buddy_data.free_blocks_list[list_idx];
@@ -71,6 +73,8 @@ static void buddy_delete_free_block(int idx, int list_idx)
     else
         prev->next = cur->next;
 
+    cur->next = NULL; // Reset the value
+
     // Update the array
     buddy_data.arr[idx] = -list_idx; // The first stores the negative value of block size (exp)
     for (int i = 1; i < (1 << list_idx); i++)
@@ -79,11 +83,9 @@ static void buddy_delete_free_block(int idx, int list_idx)
 
 static void buddy_insert_free_block(int idx, int list_idx)
 {
-    struct node *ptr = simple_malloc(sizeof(struct node));
+    struct node *ptr = &node_arr[idx];
     struct node *cur = buddy_data.free_blocks_list[list_idx];
     struct node *prev = NULL;
-
-    ptr->idx = idx;
 
     while (cur != NULL && cur->idx < idx)
     {
@@ -110,6 +112,12 @@ inline static bool buddy_list_empty(int list_idx)
 
 void buddy_init()
 {
+    for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
+    {
+        node_arr[i].idx = i;
+        node_arr[i].next = NULL;
+    }
+
     buddy_data.base = _sbrk;
     buddy_data.end = _ebrk;
     
