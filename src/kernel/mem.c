@@ -341,7 +341,7 @@ void* malloc(size_t size)
     node_ptr->bitmap[0] |= 0b1;
     node_ptr->cur_idx = 0;
     
-    return node_ptr;
+    return node_ptr->addr;
 }
 
 void* calloc(size_t nitems, size_t size)
@@ -355,6 +355,12 @@ void free(void *ptr)
     int page_idx = (ptr - buddy_data.base) / PAGE_SIZE;
     int chunk_idx;
     struct dynamic_node *node_ptr = &dynamic_node_arr[page_idx];
+
+    if (ptr < buddy_data.base || ptr >= buddy_data.end)
+    {
+        printf("Invalid pointer\r\n");
+        return;
+    }
 
     if (node_ptr->chunk_size == PAGE_SIZE)
     {
