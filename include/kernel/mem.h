@@ -10,6 +10,7 @@
 #define NUM_PAGES_EXP 7
 #define FREE 1000
 #define X -1000
+#define NEG_ZERO -INT_MAX
 
 // Memory pool from (1 << 4)-byte to (1 << 11)-byte block
 #define MIN_POOL_SIZE_EXP 4

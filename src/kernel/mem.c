@@ -100,7 +100,7 @@ static void buddy_delete_free_block(int idx, int list_idx)
     cur->next = NULL; // Reset the value
 
     // Update the array
-    buddy_data.arr[idx] = -list_idx; // The first stores the negative value of block size (exp)
+    buddy_data.arr[idx] = (list_idx == 0) ? NEG_ZERO : -list_idx; // The first stores the negative value of block size (exp)
     for (int i = 1; i < (1 << list_idx); i++)
         buddy_data.arr[idx + i] = X;
 }
@@ -161,7 +161,9 @@ void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
         
     log("cut the block of %u (pages) size from index %d\r\n", 1 << block_size_exp, idx);
 
-    buddy_data.arr[idx]++;
+    if (++buddy_data.arr[idx] == 0) // The value is negative, so plus 1
+        buddy_data.arr[idx] = NEG_ZERO;
+
     buddy_insert_free_block(idx + (1 << (block_size_exp - 1)), block_size_exp - 1);
     buddy_cut_block(idx, block_size_exp - 1, required_size);
 }
@@ -220,7 +222,7 @@ void buddy_free(void *ptr)
 {
     int idx, list_idx;
 
-    if (ptr < (void*)_sbrk || ptr >= (void*)_ebrk || (uintptr_t)ptr & (PAGE_SIZE - 1))
+    if (ptr < buddy_data.base || ptr >= buddy_data.end || (uintptr_t)ptr & (PAGE_SIZE - 1))
     {
         printf("Invalid pointer\r\n");
         return;
@@ -239,7 +241,7 @@ void buddy_free(void *ptr)
         return;
     }
 
-    list_idx = -buddy_data.arr[idx];
+    list_idx = (buddy_data.arr[idx] == NEG_ZERO) ? 0 : -buddy_data.arr[idx];
 
     buddy_insert_free_block(idx, list_idx);
     buddy_merge_block(idx, list_idx);
