@@ -158,6 +158,7 @@ void elasped_time(void* data)
 void print_msg(void *data)
 {
     printf("%s\r\n", data);
+    free(data);
 }
 
 void init_timer_queue()
@@ -281,7 +282,7 @@ int set_timeout()
     if ((sec = str2u32(sec_str, strlen(sec_str))) == 0)
         return -1;
 
-    data = simple_malloc(strlen(msg) + 1);
+    data = malloc(strlen(msg) + 1);
     strcpy((char*)data, msg);
     
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));

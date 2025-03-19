@@ -10,6 +10,16 @@ void memcpy(void *dst, void *src, uint32_t size)
         *d++ = *s++;
 }
 
+void* memset(void *s, char c, size_t n)
+{
+    char *p = (char*)s;
+
+    for (int i = 0; i < n; i++)
+        *p++ = c;
+
+    return s;
+}
+
 static void *heap_ptr = _ebss;
 
 void* simple_malloc(size_t size)
@@ -41,20 +51,34 @@ void* simple_malloc(size_t size)
     return NULL;
 }
 
+////////////////////////////////////////
+// Data structure of buddy system:
+// 1. base, end: the memory range for buddy system to allocate
+// 2. arr: each element represents a page, its value means:
+//      i.      FREE: the page is free and not the head of a block
+//      ii.     X: the page is being used and not the head of a block
+//      iii.    other pos. int: the size of the block (it's the head of the free block)
+//      iv.     other neg. int: the size of the block (it's the head of the used block)
+// 3. free_blocks_list: each element is a linked list of free blocks with 2^idx page size
+// 
+// buddy_node:
+//      1. idx: the index of the page in buddy system
+////////////////////////////////////////
+
 struct 
 {
     void *base;
     void *end;
     int arr[1 << NUM_PAGES_EXP];
-    struct node *free_blocks_list[NUM_PAGES_EXP + 1];
+    struct buddy_node *free_blocks_list[NUM_PAGES_EXP + 1];
 } static buddy_data;
 
-struct node node_arr[1 << NUM_PAGES_EXP];
+struct buddy_node buddy_node_arr[1 << NUM_PAGES_EXP];
 
 static void buddy_delete_free_block(int idx, int list_idx)
 {
-    struct node *cur = buddy_data.free_blocks_list[list_idx];
-    struct node *prev = NULL;
+    struct buddy_node *cur = buddy_data.free_blocks_list[list_idx];
+    struct buddy_node *prev = NULL;
 
     while (cur != NULL && cur->idx != idx)
     {
@@ -83,9 +107,9 @@ static void buddy_delete_free_block(int idx, int list_idx)
 
 static void buddy_insert_free_block(int idx, int list_idx)
 {
-    struct node *ptr = &node_arr[idx];
-    struct node *cur = buddy_data.free_blocks_list[list_idx];
-    struct node *prev = NULL;
+    struct buddy_node *node_ptr = &buddy_node_arr[idx];
+    struct buddy_node *cur = buddy_data.free_blocks_list[list_idx];
+    struct buddy_node *prev = NULL;
 
     while (cur != NULL && cur->idx < idx)
     {
@@ -93,11 +117,11 @@ static void buddy_insert_free_block(int idx, int list_idx)
         cur = cur->next;
     }
         
-    ptr->next = cur;
+    node_ptr->next = cur;
     if (prev == NULL) // The node is the head
-        buddy_data.free_blocks_list[list_idx] = ptr;
+        buddy_data.free_blocks_list[list_idx] = node_ptr;
     else
-        prev->next = ptr;
+        prev->next = node_ptr;
 
     // Update the array
     buddy_data.arr[idx] = list_idx;    
@@ -114,8 +138,8 @@ void buddy_init()
 {
     for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
     {
-        node_arr[i].idx = i;
-        node_arr[i].next = NULL;
+        buddy_node_arr[i].idx = i;
+        buddy_node_arr[i].next = NULL;
     }
 
     buddy_data.base = _sbrk;
@@ -145,6 +169,9 @@ void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
 void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE*/)
 {
     int list_idx = 0, idx;
+
+    if (size == 0)
+        return NULL;
 
     while ((1 << list_idx) < size || buddy_list_empty(list_idx))
     {
@@ -216,4 +243,153 @@ void buddy_free(void *ptr)
 
     buddy_insert_free_block(idx, list_idx);
     buddy_merge_block(idx, list_idx);
+}
+
+////////////////////////////////////////
+// Data structure of dynamic allocator:
+// 1. mem_pool: each element is a linked list of allocated pages for 2^(idx + MIN_POOL_SIZE_EXP) bytes request
+// 
+// dynamic_node:
+//      1. addr: the address of the page
+//      2. chunk_size: the page is for chunks of what size
+// (the following is not used in page allocation)
+//      3. sum: add/sub the (idx + 1) of the chunk when malloc/free, sum == 0 means the page can be freed
+//      4. bitmap: each bit represents whether a chunk is allocated, 
+//                  total needs at most PAGE_SIZE / (1 << MIN_POOL_SIZE_EXP) bits = 4 uint64_t
+//      5. cur_idx: the last allocated chunk idx
+////////////////////////////////////////
+
+struct dynamic_node *mem_pool[MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP + 1];
+static struct dynamic_node dynamic_node_arr[1 << NUM_PAGES_EXP];
+
+void allocator_init()
+{
+    for (int i = 0; i <= MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP; i++)
+        mem_pool[i] = NULL;
+
+    for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
+    {
+        dynamic_node_arr[i].addr = buddy_data.base + i * PAGE_SIZE;
+        dynamic_node_arr[i].chunk_size = PAGE_SIZE;
+        dynamic_node_arr[i].sum = 0;
+        dynamic_node_arr[i].next = NULL;
+        for (int j = 0; j < BITMAP_ARR; j++)
+            dynamic_node_arr[i].bitmap[j] = 0;
+        dynamic_node_arr[i].cur_idx = -1;
+    }
+}
+
+void* malloc(size_t size)
+{
+    int size_exp;
+    struct dynamic_node *prev = NULL, *cur, *node_ptr;
+    void *addr;
+
+    if (size == 0)
+        return NULL;
+    if (size >= PAGE_SIZE)
+        return buddy_malloc((size - 1) / PAGE_SIZE + 1);
+    
+    for (size_exp = -1; size > 0; size_exp++, size >>= 1) ;
+
+    if (size_exp > MAX_POOL_SIZE_EXP)
+        return buddy_malloc(1);
+    if (size_exp < MIN_POOL_SIZE_EXP)
+        size_exp = MIN_POOL_SIZE_EXP;
+
+    cur = mem_pool[size_exp - MIN_POOL_SIZE_EXP];
+
+    while (cur != NULL)
+    {
+        int num_chunks = PAGE_SIZE / (1 << size_exp);
+        for (int i = cur->cur_idx + 1; ; i = (i + 1) % num_chunks)
+        {
+            int bitmap_arr_idx = i / 64;
+            int bitmap_element_idx = i % 64;
+
+            if (cur->bitmap[bitmap_arr_idx] & (1 << bitmap_element_idx)) // The chunk is allocated
+            {
+                if (i == cur->cur_idx) // It has looped through the chunks
+                    break;
+                continue;
+            }
+
+            cur->sum += (i + 1);
+            cur->bitmap[bitmap_arr_idx] |= (1 << bitmap_element_idx);
+            cur->cur_idx = i;
+
+            return cur->addr + i * cur->chunk_size;
+        }
+
+        prev = cur;
+        cur = cur->next;
+    }
+
+    // There's no free chunk in the memory pool, allocate a new pageframe
+    addr = buddy_malloc(1);
+    node_ptr = &dynamic_node_arr[(addr - buddy_data.base) / PAGE_SIZE];
+
+    if (prev == NULL) // The first pageframe in the memory pool
+        mem_pool[size_exp - MIN_POOL_SIZE_EXP] = node_ptr;
+    else
+        prev->next = node_ptr;
+
+    node_ptr->chunk_size = 1 << size_exp;
+    node_ptr->sum += 1;
+    node_ptr->bitmap[0] |= 0b1;
+    node_ptr->cur_idx = 0;
+    
+    return node_ptr;
+}
+
+void* calloc(size_t nitems, size_t size)
+{
+    size_t sz = nitems * size;
+    return memset(malloc(sz), 0, sz);
+}
+
+void free(void *ptr)
+{
+    int page_idx = (ptr - buddy_data.base) / PAGE_SIZE;
+    int chunk_idx;
+    struct dynamic_node *node_ptr = &dynamic_node_arr[page_idx];
+
+    if (node_ptr->chunk_size == PAGE_SIZE)
+    {
+        buddy_free(ptr);
+        return;
+    }
+
+    chunk_idx = (ptr - node_ptr->addr) / node_ptr->chunk_size;
+
+    node_ptr->sum -= (chunk_idx + 1);
+    node_ptr->bitmap[chunk_idx / 64] &= ~(1 << (chunk_idx % 64));
+
+    if (node_ptr->sum == 0) // The pageframe can be freed
+    {
+        struct dynamic_node *prev = NULL, *cur;
+        int size_exp = -1;
+
+        for (int size = node_ptr->chunk_size; size > 0; size_exp++, size >>= 1) ;
+
+        cur = mem_pool[size_exp - MIN_POOL_SIZE_EXP];
+        while (cur != node_ptr)
+        {
+           prev = cur;
+           cur = cur->next;
+        }
+
+        if (prev == NULL)
+            mem_pool[size_exp - MIN_POOL_SIZE_EXP] = cur->next;
+        else
+            prev->next = cur->next;
+        
+        node_ptr->chunk_size = PAGE_SIZE;
+        node_ptr->sum = 0;
+        node_ptr->next = NULL;
+        for (int i = 0; i < BITMAP_ARR; i++)
+            node_ptr->bitmap[i] = 0;
+
+        buddy_free(node_ptr->addr);
+    }
 }

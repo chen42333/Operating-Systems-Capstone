@@ -100,6 +100,7 @@ int main(void *_dtb_addr)
     core_timer_enable();
 
     buddy_init();
+    allocator_init();
 
     dtb_addr = _dtb_addr;
     fdt_traverse(initramfs_callback);
