@@ -55,10 +55,9 @@ void* simple_malloc(size_t size)
 // Data structure of buddy system:
 // 1. base, end: the memory range for buddy system to allocate
 // 2. arr: each element represents a page, its value means:
-//      i.      FREE: the page is free and not the head of a block
-//      ii.     X: the page is being used and not the head of a block
-//      iii.    other pos. int: the size of the block (it's the head of the free block)
-//      iv.     other neg. int: the size of the block (it's the head of the used block)
+//      i.      EMPTY: the page is not head of a block
+//      ii.     other pos. int: the size of the block (it's the head of the free block)
+//      iii.    other neg. int (or NEG_ZERO): the size of the block (it's the head of the used block)
 // 3. free_blocks_list: each element is a linked list of free blocks with 2^idx page size
 // 
 // buddy_node:
@@ -75,52 +74,49 @@ struct
 
 struct buddy_node buddy_node_arr[1 << NUM_PAGES_EXP];
 
+inline static bool buddy_list_empty(int list_idx)
+{
+    return buddy_data.free_blocks_list[list_idx] == NULL;
+}
+
 static void buddy_delete_free_block(int idx, int list_idx)
 {
-    struct buddy_node *cur = buddy_data.free_blocks_list[list_idx];
-    struct buddy_node *prev = NULL;
+    struct buddy_node *node_ptr = &buddy_node_arr[idx];
 
-    while (cur != NULL && cur->idx != idx)
-    {
-        prev = cur;
-        cur = cur->next;
-    }
-
-    if (cur == NULL)
+    if (buddy_data.arr[idx] != list_idx)
     {
         err("Node not found\r\n");
         return;
     }
 
-    if (prev == NULL) // The node is the head
-        buddy_data.free_blocks_list[list_idx] = cur->next;
-    else
-        prev->next = cur->next;
+    if (node_ptr->prev)
+        node_ptr->prev->next = node_ptr->next;
+    if (node_ptr->next)
+        node_ptr->next->prev = node_ptr->prev;
+    
+    if (node_ptr == buddy_data.free_blocks_list[list_idx]) // The node is the head
+        buddy_data.free_blocks_list[list_idx] = node_ptr->next;
 
-    cur->next = NULL; // Reset the value
+    // Reset the node
+    node_ptr->prev = NULL;
+    node_ptr->next = NULL;
 
     // Update the array
     buddy_data.arr[idx] = (list_idx == 0) ? NEG_ZERO : -list_idx; // The first stores the negative value of block size (exp)
-    for (int i = 1; i < (1 << list_idx); i++)
-        buddy_data.arr[idx + i] = X;
 }
 
 static void buddy_insert_free_block(int idx, int list_idx)
 {
     struct buddy_node *node_ptr = &buddy_node_arr[idx];
+    struct buddy_node *head_ptr = buddy_data.free_blocks_list[list_idx];
 
-    node_ptr->next = buddy_data.free_blocks_list[list_idx];
+    if (!buddy_list_empty(list_idx))
+        head_ptr->prev = node_ptr;
+    node_ptr->next = head_ptr;
     buddy_data.free_blocks_list[list_idx] = node_ptr;
 
     // Update the array
     buddy_data.arr[idx] = list_idx;    
-    for (int i = 1; i < (1 << list_idx); i++)
-        buddy_data.arr[idx + i] = FREE;
-}
-
-inline static bool buddy_list_empty(int list_idx)
-{
-    return buddy_data.free_blocks_list[list_idx] == NULL;
 }
 
 void buddy_init()
@@ -128,11 +124,14 @@ void buddy_init()
     for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
     {
         buddy_node_arr[i].idx = i;
+        buddy_node_arr[i].prev = NULL;
         buddy_node_arr[i].next = NULL;
     }
 
     buddy_data.base = _sbrk;
     buddy_data.end = _ebrk;
+    for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
+        buddy_data.arr[i] = EMPTY;
     
     for (int i = 0; i <= NUM_PAGES_EXP; i++)
         buddy_data.free_blocks_list[i] = NULL;
@@ -183,7 +182,7 @@ void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE*/)
 
 void buddy_merge_block(int idx, int block_size_exp)
 {
-    int buddy_idx, merge_idx;
+    int buddy_idx, big_idx, small_idx;
 
     if (block_size_exp == NUM_PAGES_EXP)
         return;
@@ -196,15 +195,17 @@ void buddy_merge_block(int idx, int block_size_exp)
     if (buddy_data.arr[buddy_idx] != block_size_exp)
         return;
 
-    merge_idx = (idx < buddy_idx) ? idx : buddy_idx;
+    small_idx = (idx < buddy_idx) ? idx : buddy_idx;
+    big_idx = (idx > buddy_idx) ? idx : buddy_idx;
 
     log("merge blocks of %u (pages) size from index %d and %d, to a block of %u (pages) size\r\n" \
         , 1 << block_size_exp, idx, buddy_idx, 1 << (block_size_exp + 1));
 
     buddy_delete_free_block(idx, block_size_exp);
     buddy_delete_free_block(buddy_idx, block_size_exp);
-    buddy_insert_free_block(merge_idx, block_size_exp + 1);
-    buddy_merge_block(merge_idx, block_size_exp + 1);
+    buddy_insert_free_block(small_idx, block_size_exp + 1);
+    buddy_data.arr[big_idx] = EMPTY; // Reset manually
+    buddy_merge_block(small_idx, block_size_exp + 1);
 }
 
 void buddy_free(void *ptr)
@@ -224,7 +225,7 @@ void buddy_free(void *ptr)
         printf("The page is not in use\r\n");
         return;
     }
-    else if (buddy_data.arr[idx] == X)
+    else if (buddy_data.arr[idx] == EMPTY)
     {   
         printf("Not start of a block\r\n");
         return;

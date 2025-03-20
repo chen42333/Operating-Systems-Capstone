@@ -8,8 +8,7 @@
 
 #define PAGE_SIZE (1 << 12)
 #define NUM_PAGES_EXP 7
-#define FREE 1000
-#define X -1000
+#define EMPTY INT_MAX
 #define NEG_ZERO -INT_MAX
 
 // Memory pool from (1 << 4)-byte to (1 << 11)-byte block
@@ -20,6 +19,7 @@
 struct buddy_node
 {
     int idx;
+    struct buddy_node *prev;
     struct buddy_node *next;
 };
 
