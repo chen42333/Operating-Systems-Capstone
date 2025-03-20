@@ -6,6 +6,7 @@
 #define STRLEN 256
 
 int strcmp(const char *str1, const char *str2);
+int strncmp(const char *str1, const char *str2, size_t count);
 uint32_t hstr2u32(char *hstr, int size);
 uint32_t str2u32(char *str, int size);
 void strcpy(char *dst, char *src);

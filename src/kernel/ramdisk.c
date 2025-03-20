@@ -17,6 +17,12 @@ void ls()
         uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
 
+        if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
+        {
+            err("Invalid .cpio record\r\n");
+            continue;
+        }
+
         if (!strcmp("TRAILER!!!", record->payload))
             break;
         
@@ -42,6 +48,12 @@ int cat(char *filename)
         struct cpio_record *record = (struct cpio_record*)addr;
         uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
+
+        if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
+        {
+            err("Invalid .cpio record\r\n");
+            continue;
+        }
 
         if (!strcmp("TRAILER!!!", record->payload))
             return -1;
@@ -111,6 +123,12 @@ void load_prog()
         struct cpio_record *record = (struct cpio_record*)addr;
         uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
+
+        if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
+        {
+            err("Invalid .cpio record\r\n");
+            continue;
+        }
 
         if (!strcmp("TRAILER!!!", record->payload))
             break;

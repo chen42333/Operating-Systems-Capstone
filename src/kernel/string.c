@@ -6,9 +6,13 @@ static int strtok_len = -1;
 
 int strcmp(const char *str1, const char *str2)
 {
-    for (int i = 0; ; i++)
-    {
+    return strncmp(str1, str2, ~0);
+}
 
+int strncmp(const char *str1, const char *str2, size_t count)
+{
+    for (int i = 0; i < count; i++)
+    {
         if (str1[i] < str2[i])
             return -1;
         if (str1[i] > str2[i])
