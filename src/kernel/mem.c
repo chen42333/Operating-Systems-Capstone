@@ -2,6 +2,8 @@
 #include "uart.h"
 #include "printf.h"
 
+#define TEST_MEM
+
 void memcpy(void *dst, void *src, uint32_t size)
 {
     volatile char *d = dst, *s = src;
@@ -143,11 +145,15 @@ void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
 {
     if (block_size_exp == 0 || (1 << (block_size_exp - 1)) < required_size)
     {
+#ifdef TEST_MEM
         log("require %u pages, allocate %u pages from index %d\r\n", required_size, 1 << block_size_exp, idx);
+#endif
         return;
     }
         
+#ifdef TEST_MEM
     log("cut the block of %u (pages) size from index %d\r\n", 1 << block_size_exp, idx);
+#endif
 
     if (++buddy_data.arr[idx] == 0) // The value is negative, so plus 1
         buddy_data.arr[idx] = NEG_ZERO;
@@ -198,8 +204,10 @@ void buddy_merge_block(int idx, int block_size_exp)
     small_idx = (idx < buddy_idx) ? idx : buddy_idx;
     big_idx = (idx > buddy_idx) ? idx : buddy_idx;
 
+#ifdef TEST_MEM
     log("merge blocks of %u (pages) size from index %d and %d, to a block of %u (pages) size\r\n" \
         , 1 << block_size_exp, idx, buddy_idx, 1 << (block_size_exp + 1));
+#endif
 
     buddy_delete_free_block(idx, block_size_exp);
     buddy_delete_free_block(buddy_idx, block_size_exp);
