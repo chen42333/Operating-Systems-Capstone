@@ -108,20 +108,9 @@ static void buddy_delete_free_block(int idx, int list_idx)
 static void buddy_insert_free_block(int idx, int list_idx)
 {
     struct buddy_node *node_ptr = &buddy_node_arr[idx];
-    struct buddy_node *cur = buddy_data.free_blocks_list[list_idx];
-    struct buddy_node *prev = NULL;
 
-    while (cur != NULL && cur->idx < idx)
-    {
-        prev = cur;
-        cur = cur->next;
-    }
-        
-    node_ptr->next = cur;
-    if (prev == NULL) // The node is the head
-        buddy_data.free_blocks_list[list_idx] = node_ptr;
-    else
-        prev->next = node_ptr;
+    node_ptr->next = buddy_data.free_blocks_list[list_idx];
+    buddy_data.free_blocks_list[list_idx] = node_ptr;
 
     // Update the array
     buddy_data.arr[idx] = list_idx;    
@@ -283,7 +272,7 @@ void allocator_init()
 
 void* malloc(size_t size)
 {
-    int size_exp;
+    int size_exp = 0;
     struct dynamic_node *prev = NULL, *cur, *node_ptr;
     void *addr;
 
@@ -292,7 +281,7 @@ void* malloc(size_t size)
     if (size >= PAGE_SIZE)
         return buddy_malloc((size - 1) / PAGE_SIZE + 1);
     
-    for (size_exp = -1; size > 0; size_exp++, size >>= 1) ;
+    for (int i = 1; i < size; i <<= 1, size_exp++) ;
 
     if (size_exp > MAX_POOL_SIZE_EXP)
         return buddy_malloc(1);
@@ -369,6 +358,12 @@ void free(void *ptr)
     }
 
     chunk_idx = (ptr - node_ptr->addr) / node_ptr->chunk_size;
+
+    if (!(node_ptr->bitmap[chunk_idx / 64] & (1 << (chunk_idx % 64))))
+    {
+        printf("The chunk is not in use\r\n");
+        return;
+    }
 
     node_ptr->sum -= (chunk_idx + 1);
     node_ptr->bitmap[chunk_idx / 64] &= ~(1 << (chunk_idx % 64));
