@@ -22,8 +22,8 @@ _other_cores:
   
 _core_0:
   // Initialize .bss
-  adr x0, _sbss
-  adr x1, _ebss
+  ldr x0, =_sbss
+  ldr x1, =_ebss
 
 _loop1:
   cmp x0, x1
@@ -33,7 +33,7 @@ _loop1:
   b _loop1
 
 _end_loop1:
-  adr x0, _estack  // Set stack pointer
+  ldr x0, =_estack  // Set stack pointer
   mov sp, x0
   mov x0, x28
   b main
@@ -42,9 +42,9 @@ exec_prog:
   str x0, [sp, 8]
   mov x0, 0 
   msr spsr_el1, x0
-  adr x0, _sprog
+  ldr x0, =_sprog
   msr elr_el1, x0
-  adr x0, _eprog_stack
+  ldr x0, =_eprog_stack
   msr sp_el0, x0
   ldr x0, [sp, 8]
   eret
