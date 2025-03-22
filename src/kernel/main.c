@@ -167,7 +167,7 @@ int main(void *_dtb_addr)
                     "reboot\t: reboot the device\r\n"
                     "ls\t: list all the files in ramdisk\r\n"
                     "cat\t: show the content of file1\r\n"
-                    "memAlloc <size>\r: allocate <size> bytes data using simple allocator\r\n"
+                    "memAlloc <size>\t: allocate <size> bytes data using simple allocator\r\n"
                     "ldProg\t: execute the specified program in the ramdisk\r\n"
                     "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n"
                     "pageAlloc <num>\t: allocate <num> pages from pageframe allocator\r\n"
