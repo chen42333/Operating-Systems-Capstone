@@ -1,8 +1,12 @@
 #include "mem.h"
 #include "uart.h"
 #include "printf.h"
+#include "device_tree.h"
+#include "string.h"
 
 #define TEST_MEM
+
+static int dtb_str_idx = 0;
 
 void memcpy(void *dst, void *src, uint32_t size)
 {
@@ -30,7 +34,7 @@ void* simple_malloc(size_t size)
     size_t align_padding = 0;
 
     // Do the alignment according to the size
-    for (int i = (1 << 3); i >= 1; i >>= 1)
+    for (size_t i = (1 << 3); i >= 1; i >>= 1)
     {
         if (size % i == 0)
         {
@@ -70,11 +74,13 @@ struct
 {
     void *base;
     void *end;
-    int arr[1 << NUM_PAGES_EXP];
-    struct buddy_node *free_blocks_list[NUM_PAGES_EXP + 1];
+    void *usable_memory[2];
+    int num_pages_exp;
+    int arr[1 << MAX_NUM_PAGES_EXP];
+    struct buddy_node *free_blocks_list[MAX_NUM_PAGES_EXP + 1];
 } static buddy_data;
 
-struct buddy_node buddy_node_arr[1 << NUM_PAGES_EXP];
+struct buddy_node buddy_node_arr[1 << MAX_NUM_PAGES_EXP];
 
 inline static bool buddy_list_empty(int list_idx)
 {
@@ -123,22 +129,42 @@ static void buddy_insert_free_block(int idx, int list_idx)
 
 void buddy_init()
 {
-    for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
+    size_t int_ptr;
+
+    if ((size_t)buddy_data.usable_memory[0] < PAGE_SIZE)
+        buddy_data.base = (void*)0x0;
+    else
+    {
+        int_ptr = 1ULL << (sizeof(size_t) * 8 - 1);
+        while (int_ptr > (size_t)buddy_data.usable_memory[0])
+            int_ptr >>= 1;
+        buddy_data.base = (void*)int_ptr;
+    }
+
+    int_ptr = PAGE_SIZE;
+    buddy_data.num_pages_exp = 0;
+    while (int_ptr < (size_t)buddy_data.usable_memory[1])
+    {
+        int_ptr <<= 1;
+        buddy_data.num_pages_exp++;
+    }
+
+    buddy_data.end = (void*)(int_ptr + buddy_data.base);
+
+    for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
     {
         buddy_node_arr[i].idx = i;
         buddy_node_arr[i].prev = NULL;
         buddy_node_arr[i].next = NULL;
     }
 
-    buddy_data.base = _sbrk;
-    buddy_data.end = _ebrk;
-    for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
+    for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
         buddy_data.arr[i] = EMPTY;
     
-    for (int i = 0; i <= NUM_PAGES_EXP; i++)
+    for (int i = 0; i <= buddy_data.num_pages_exp; i++)
         buddy_data.free_blocks_list[i] = NULL;
 
-    buddy_insert_free_block(0, NUM_PAGES_EXP);
+    buddy_insert_free_block(0, buddy_data.num_pages_exp);
 }
 
 void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
@@ -146,13 +172,13 @@ void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
     if (block_size_exp == 0 || (1 << (block_size_exp - 1)) < required_size)
     {
 #ifdef TEST_MEM
-        log("require %u pages, allocate %u pages from index %d\r\n", required_size, 1 << block_size_exp, idx);
+        log("require %u pages, allocate %u pages from index 0x%x\r\n", required_size, 1 << block_size_exp, idx);
 #endif
         return;
     }
-        
+
 #ifdef TEST_MEM
-    log("cut the block of %u (pages) size from index %d\r\n", 1 << block_size_exp, idx);
+    log("cut the block of %u (pages) size from index 0x%x\r\n", 1 << block_size_exp, idx);
 #endif
 
     if (++buddy_data.arr[idx] == 0) // The value is negative, so plus 1
@@ -171,7 +197,7 @@ void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE*/)
 
     while ((1 << list_idx) < size || buddy_list_empty(list_idx))
     {
-        if (++list_idx > NUM_PAGES_EXP)
+        if (++list_idx > buddy_data.num_pages_exp)
         {
             printf("No enough space\r\n");
             return NULL;
@@ -190,7 +216,7 @@ void buddy_merge_block(int idx, int block_size_exp)
 {
     int buddy_idx, big_idx, small_idx;
 
-    if (block_size_exp == NUM_PAGES_EXP)
+    if (block_size_exp == buddy_data.num_pages_exp)
         return;
 
     if (idx % (1 << (block_size_exp + 1)) == 0)
@@ -205,7 +231,7 @@ void buddy_merge_block(int idx, int block_size_exp)
     big_idx = (idx > buddy_idx) ? idx : buddy_idx;
 
 #ifdef TEST_MEM
-    log("merge blocks of %u (pages) size from index %d and %d, to a block of %u (pages) size\r\n" \
+    log("merge blocks of %u (pages) size from index 0x%x and 0x%x, to a block of %u (pages) size\r\n" \
         , 1 << block_size_exp, idx, buddy_idx, 1 << (block_size_exp + 1));
 #endif
 
@@ -245,6 +271,110 @@ void buddy_free(void *ptr)
     buddy_merge_block(idx, list_idx);
 }
 
+static void buddy_clear_block(int idx, int block_size_exp)
+{
+    int buddy_idx;
+
+    if (idx % (1 << block_size_exp) != 0)
+    {
+        err("The index is not aligned with the block size\r\n");
+        return;
+    }
+    
+    if (buddy_data.arr[idx] >= block_size_exp)
+        return;
+
+    if ((buddy_data.arr[idx] != NEG_ZERO && buddy_data.arr[idx] <= -block_size_exp)
+         || (buddy_data.arr[idx] == NEG_ZERO && block_size_exp == 0))
+    {
+        buddy_insert_free_block(idx, block_size_exp);
+        return;
+    }  
+
+    buddy_idx = idx + (1 << (block_size_exp - 1)); // idx is the start of the block, so idx will be the smaller one
+    
+    buddy_clear_block(idx, block_size_exp - 1);
+    buddy_clear_block(buddy_idx, block_size_exp - 1);
+
+    buddy_delete_free_block(idx, block_size_exp - 1);
+    buddy_delete_free_block(buddy_idx, block_size_exp - 1);
+    buddy_insert_free_block(idx, block_size_exp);
+    buddy_data.arr[buddy_idx] = EMPTY; // Reset manually
+}
+
+void memory_reserve(void *start, void *end)
+{
+    void *reserve_start;
+    int reserve_len_exp = 0; // The unit is "page"
+    int idx, parent_idx;
+    size_t size = end - start; // The unit is "byte"
+
+#ifdef TEST_MEM
+    log("Reserve 0x%x-0x%x\r\n", start, end);
+#endif
+
+    // Mark the region as allocated
+    for (size_t i = PAGE_SIZE; ; i <<= 1, reserve_len_exp++) // i stands for size of the smallest block that can cover the whole region
+    {
+        void *block_start, *block_end;
+
+        if (i < size)
+            continue;
+
+        block_start = (void*)((size_t)start & ~(i - 1)); // The largest i-aligned number which is <= start
+        block_end = block_start + i;
+
+        if (block_end < end)
+            continue;
+
+        // Found the proper block
+        reserve_start = block_start;
+        break;
+    }
+
+    idx = (size_t)reserve_start / PAGE_SIZE;
+    parent_idx = idx;
+    while (buddy_data.arr[parent_idx] == EMPTY)
+        parent_idx -= (parent_idx & -parent_idx); // (parent_idx & -parent_idx) is the largest factor of parent_idx which is power of 2 (the lowest bit 1)
+        
+
+    /*
+    1. No overlapping
+    2. Coverd
+    3. Cover the other block(s)
+
+-num_pages_exp   -reserve_len_exp         0         reserve_len_exp     num_pages_exp
+      |        2        |        3        |        3        |        1        |
+    */
+
+    if (buddy_data.arr[parent_idx] <= -reserve_len_exp && buddy_data.arr[parent_idx] != NEG_ZERO) // The block has been coverd by the other reserved block
+        return;
+    else if (buddy_data.arr[parent_idx] >= reserve_len_exp) // No overlapping
+    {
+        for (int i = buddy_data.arr[parent_idx]; i > reserve_len_exp; i--)
+        {
+            int idx1 = parent_idx, idx2 = parent_idx + (1 << (i - 1));
+
+            buddy_delete_free_block(parent_idx, i);
+            buddy_insert_free_block(idx1, i - 1);
+            buddy_insert_free_block(idx2, i - 1);
+
+            parent_idx = (idx2 > idx) ? idx1 : idx2;
+        }
+
+        buddy_delete_free_block(idx, reserve_len_exp);
+    }
+    else // The block covers the other block(s), and parent_idx will be equal to idx
+    {
+        buddy_clear_block(idx, reserve_len_exp); // Clear the overlapped blocks first
+        buddy_delete_free_block(idx, reserve_len_exp);
+    }
+
+#ifdef TEST_MEM
+    log("0x%x-0x%x reserved\r\n", reserve_start, reserve_start + (1ULL << reserve_len_exp) * PAGE_SIZE);
+#endif
+}
+
 ////////////////////////////////////////
 // Data structure of dynamic allocator:
 // 1. mem_pool: each element is a linked list of allocated pages for 2^(idx + MIN_POOL_SIZE_EXP) bytes request
@@ -260,14 +390,14 @@ void buddy_free(void *ptr)
 ////////////////////////////////////////
 
 struct dynamic_node *mem_pool[MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP + 1];
-static struct dynamic_node dynamic_node_arr[1 << NUM_PAGES_EXP];
+static struct dynamic_node dynamic_node_arr[1 << MAX_NUM_PAGES_EXP];
 
-void allocator_init()
+void dynamic_allocator_init()
 {
     for (int i = 0; i <= MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP; i++)
         mem_pool[i] = NULL;
 
-    for (int i = 0; i < (1 << NUM_PAGES_EXP); i++)
+    for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
     {
         dynamic_node_arr[i].addr = buddy_data.base + i * PAGE_SIZE;
         dynamic_node_arr[i].chunk_size = PAGE_SIZE;
@@ -290,7 +420,7 @@ void* malloc(size_t size)
     if (size >= PAGE_SIZE)
         return buddy_malloc((size - 1) / PAGE_SIZE + 1);
     
-    for (int i = 1; i < size; i <<= 1, size_exp++) ;
+    for (size_t i = 1; i < size; i <<= 1, size_exp++) ;
 
     if (size_exp > MAX_POOL_SIZE_EXP)
         return buddy_malloc(1);
@@ -382,7 +512,7 @@ void free(void *ptr)
         struct dynamic_node *prev = NULL, *cur;
         int size_exp = -1;
 
-        for (int size = node_ptr->chunk_size; size > 0; size_exp++, size >>= 1) ;
+        for (size_t size = node_ptr->chunk_size; size > 0; size_exp++, size >>= 1) ;
 
         cur = mem_pool[size_exp - MIN_POOL_SIZE_EXP];
         while (cur != node_ptr)
@@ -404,4 +534,65 @@ void free(void *ptr)
 
         buddy_free(node_ptr->addr);
     }
+}
+
+void reserve_mem_regions()
+{
+    memory_reserve(SPIN_TABLE_START, SPIN_TABLE_END); // Spin tables for multicore boot
+    memory_reserve(_stext, _estack); // Kernel image
+    memory_reserve(_sprog, _eprog_stack); // User program (test)
+    memory_reserve(ramdisk_saddr, ramdisk_eaddr); // Initramfs
+    memory_reserve(dtb_addr, dtb_addr + dtb_len); // Device tree
+    // Unusable memory region
+    if (buddy_data.usable_memory[0] != buddy_data.base)
+        memory_reserve(buddy_data.base, buddy_data.usable_memory[0]);
+    if (buddy_data.usable_memory[1] != buddy_data.end)
+        memory_reserve(buddy_data.usable_memory[1], buddy_data.end);
+}
+
+bool mem_region(void *p, char *name)
+{
+    struct fdt_node_comp *ptr = (struct fdt_node_comp*)p;
+    int i;
+    bool last = false;
+    char path[] = USABLE_MEM_DTB_PATH;
+
+    if (big2host(ptr->token) == FDT_END)
+    {
+        dtb_str_idx = 0;
+        return false;
+    }
+    else if (big2host(ptr->token) != FDT_BEGIN_NODE && big2host(ptr->token) != FDT_PROP)
+        return false;
+
+    if (dtb_str_idx == 0 && path[dtb_str_idx] == '/')
+        dtb_str_idx++;
+    
+    for (i = dtb_str_idx; path[i] != '/'; i++)
+    {
+        if (path[i] == '\0')
+        {
+            last = true;
+            break;
+        }
+    }
+    path[i] = '\0';
+
+    if (!strcmp(&path[dtb_str_idx], name))
+    {
+        dtb_str_idx = i + 1;
+        if (last)
+        {
+            uint32_t start = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop)));
+            uint32_t end = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop) + sizeof(uint32_t)));
+
+            buddy_data.usable_memory[0] = (void*)(uintptr_t)start;
+            buddy_data.usable_memory[1] = (void*)(uintptr_t)end;
+
+            dtb_str_idx = 0;
+            return true;
+        }
+    }
+
+    return false;
 }

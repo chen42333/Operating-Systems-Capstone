@@ -146,14 +146,15 @@ int main(void *_dtb_addr)
 
     core_timer_enable();
 
-    buddy_init();
-    allocator_init();
-
     dtb_addr = _dtb_addr;
     dtb_get_len();
     fdt_traverse(initramfs_start);
     fdt_traverse(initramfs_end);
     fdt_traverse(mem_region);
+    
+    buddy_init();
+    dynamic_allocator_init();
+    reserve_mem_regions();
     
     while (true)
     {

@@ -6,15 +6,20 @@
 
 #define HEAP_SIZE 0x20000
 
-#define PAGE_SIZE (1 << 12)
-#define NUM_PAGES_EXP 7
+#define SPIN_TABLE_START (void*)0x0
+#define SPIN_TABLE_END (void*)0x1000
+
+#define PAGE_SIZE (1ULL << 12)
+#define MAX_NUM_PAGES_EXP 18 // log(0x40000000 / PAGE_SIZE)
 #define EMPTY INT_MAX
 #define NEG_ZERO -INT_MAX
 
 // Memory pool from (1 << 4)-byte to (1 << 11)-byte block
 #define MIN_POOL_SIZE_EXP 4
 #define MAX_POOL_SIZE_EXP 11
-#define BITMAP_ARR PAGE_SIZE / (1 << MIN_POOL_SIZE_EXP) / 64
+#define BITMAP_ARR PAGE_SIZE / (1ULL << MIN_POOL_SIZE_EXP) / 64
+
+#define USABLE_MEM_DTB_PATH "/memory/reg"
 
 struct buddy_node
 {
@@ -33,18 +38,18 @@ struct dynamic_node
     struct dynamic_node *next;
 };
 
-extern char _sbrk[];
-extern char _ebrk[];
-
 void memcpy(void *dst, void *src, uint32_t size);
 void* memset(void *s, char c, size_t n);
 void* simple_malloc(size_t size);
 void buddy_init();
 void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE*/);
 void buddy_free(void *ptr);
-void allocator_init();
+void dynamic_allocator_init();
 void* malloc(size_t size);
 void *calloc(size_t nitems, size_t size);
 void free(void *ptr);
+void memory_reserve(void *start, void *end);
+void reserve_mem_regions();
+bool mem_region(void *p, char *name);
 
 #endif
