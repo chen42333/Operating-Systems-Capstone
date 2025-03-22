@@ -9,7 +9,6 @@
 #include "interrupt.h"
 #include "printf.h"
 
-extern void *dtb_addr;
 extern void exec_prog();
 
 void mem_alloc()
@@ -151,7 +150,10 @@ int main(void *_dtb_addr)
     allocator_init();
 
     dtb_addr = _dtb_addr;
-    fdt_traverse(initramfs_callback);
+    dtb_get_len();
+    fdt_traverse(initramfs_start);
+    fdt_traverse(initramfs_end);
+    fdt_traverse(mem_region);
     
     while (true)
     {

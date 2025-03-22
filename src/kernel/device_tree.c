@@ -4,8 +4,9 @@
 #include "printf.h"
 
 void *dtb_addr;
+size_t dtb_len;
 
-void fdt_traverse(int (*func)(void*, char*))
+void fdt_traverse(bool (*func)(void*, char*))
 {
     struct fdt_header *hdr = (struct fdt_header*)dtb_addr;
     void *p;

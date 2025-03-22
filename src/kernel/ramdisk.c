@@ -5,12 +5,14 @@
 #include "string.h"
 #include "printf.h"
 
-void *ramdisk_addr;
-int idx = 0;
+void *ramdisk_saddr;
+void *ramdisk_eaddr;
+static int dtb_str_idx = 0;
 
 void ls()
 {
-    void *addr = ramdisk_addr;
+    void *addr = ramdisk_saddr;
+
     while (true)
     {
         struct cpio_record *record = (struct cpio_record*)addr;
@@ -38,7 +40,7 @@ void ls()
 
 int cat(char *filename)
 {
-    void *addr = ramdisk_addr;
+    void *addr = ramdisk_saddr;
 
     if (filename == NULL)
         return -1;
@@ -72,25 +74,24 @@ int cat(char *filename)
     }
 }
 
-int initramfs_callback(void *p, char *name)
+static bool initramfs_process_node(void *p, char *name, char *path, void **addr_ptr)
 {
     struct fdt_node_comp *ptr = (struct fdt_node_comp*)p;
     int i;
     bool last = false;
-    char path[] = INITRD_NODE_PATH;
 
     if (big2host(ptr->token) == FDT_END)
     {
-        idx = 0;
+        dtb_str_idx = 0;
         return false;
     }
     else if (big2host(ptr->token) != FDT_BEGIN_NODE && big2host(ptr->token) != FDT_PROP)
         return false;
 
-    if (idx == 0 && path[idx] == '/')
-        idx++;
+    if (dtb_str_idx == 0 && path[dtb_str_idx] == '/')
+        dtb_str_idx++;
     
-    for (i = idx; path[i] != '/'; i++)
+    for (i = dtb_str_idx; path[i] != '/'; i++)
     {
         if (path[i] == '\0')
         {
@@ -100,14 +101,15 @@ int initramfs_callback(void *p, char *name)
     }
     path[i] = '\0';
 
-    if (!strcmp(&path[idx], name))
+    if (!strcmp(&path[dtb_str_idx], name))
     {
-        idx = i + 1;
+        dtb_str_idx = i + 1;
         if (last)
         {
             uint32_t value = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop)));
-            ramdisk_addr = (void*)(uintptr_t)value;
-            idx = 0;
+
+            *addr_ptr = (void*)(uintptr_t)value;
+            dtb_str_idx = 0;
             return true;
         }
     }
@@ -115,9 +117,23 @@ int initramfs_callback(void *p, char *name)
     return false;
 }
 
+bool initramfs_start(void *p, char *name)
+{
+    char path[] = INITRD_START_DTB_PATH;
+
+    return initramfs_process_node(p, name, path, &ramdisk_saddr);
+}
+
+bool initramfs_end(void *p, char *name)
+{
+    char path[] = INITRD_END_DTB_PATH;
+
+    return initramfs_process_node(p, name, path, &ramdisk_eaddr);
+}
+
 void load_prog()
 {
-    void *addr = ramdisk_addr;
+    void *addr = ramdisk_saddr;
     while (true)
     {
         struct cpio_record *record = (struct cpio_record*)addr;

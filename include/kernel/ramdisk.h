@@ -1,7 +1,10 @@
 #ifndef __RAMDISK_H
 #define __RAMDISK_H
 
-#define INITRD_NODE_PATH "/chosen/linux,initrd-start"
+#include "utils.h"
+
+#define INITRD_START_DTB_PATH "/chosen/linux,initrd-start"
+#define INITRD_END_DTB_PATH "/chosen/linux,initrd-end"
 
 struct cpio_newc_header {
     char    c_magic[6];
@@ -28,7 +31,8 @@ struct cpio_record
 
 void ls();
 int cat(char *filename);
-int initramfs_callback(void *p, char *name);
+bool initramfs_start(void *p, char *name);
+bool initramfs_end(void *p, char *name);
 void load_prog();
 
 #endif

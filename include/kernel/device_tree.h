@@ -34,6 +34,11 @@ struct fdt_node_prop{
     uint32_t nameoff;
 };
 
-void fdt_traverse(int (*func)(void*, char*));
+inline static void dtb_get_len()
+{
+    dtb_len = big2host(((struct fdt_header*)dtb_addr)->totalsize);
+}
+
+void fdt_traverse(bool (*func)(void*, char*));
 
 #endif
