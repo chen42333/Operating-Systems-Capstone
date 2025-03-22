@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "printf.h"
 
 #define true 1
 #define false 0
@@ -21,6 +22,13 @@ extern char _sbss[];
 extern char _ebss[];
 extern char _estack[];
 extern char _sprog[];
+extern char _eprog_stack[];
+
+extern void *dtb_addr;
+extern size_t dtb_len;
+extern void *ramdisk_saddr;
+extern void *ramdisk_eaddr;
+extern void *usable_memory[2];
 
 uint32_t big2host(uint32_t num);
 

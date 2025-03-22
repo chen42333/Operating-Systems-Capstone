@@ -2,14 +2,13 @@
 #define __DEVICE_TREE_H
 
 #include <stdint.h>
+#include "utils.h"
 
 #define FDT_BEGIN_NODE 0x00000001
 #define FDT_END_NODE 0x00000002
 #define FDT_PROP 0x00000003
 #define FDT_NOP 0x00000004
 #define FDT_END 0x00000009
-
-extern void *dtb_addr;
 
 struct fdt_header {
     uint32_t magic;
