@@ -254,7 +254,7 @@ void buddy_free(void *ptr)
 
     idx = (ptr - buddy_data.base) / PAGE_SIZE;
 
-    if (buddy_data.arr[idx] > 0)
+    if (buddy_data.arr[idx] >= 0)
     {
         printf("The page is not in use\r\n");
         return;
