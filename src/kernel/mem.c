@@ -448,6 +448,9 @@ void* malloc(size_t size)
             cur->bitmap[bitmap_arr_idx] |= (1 << bitmap_element_idx);
             cur->cur_idx = i;
 
+#ifdef TEST_MEM
+            log("allocate %d bytes from 0x%x\r\n", cur->chunk_size, cur->addr + i * cur->chunk_size);
+#endif
             return cur->addr + i * cur->chunk_size;
         }
 
@@ -468,6 +471,10 @@ void* malloc(size_t size)
     node_ptr->sum += 1;
     node_ptr->bitmap[0] |= 0b1;
     node_ptr->cur_idx = 0;
+
+#ifdef TEST_MEM
+    log("allocate %d bytes from 0x%x\r\n", node_ptr->chunk_size, node_ptr->addr);
+#endif
     
     return node_ptr->addr;
 }
@@ -506,6 +513,10 @@ void free(void *ptr)
 
     node_ptr->sum -= (chunk_idx + 1);
     node_ptr->bitmap[chunk_idx / 64] &= ~(1 << (chunk_idx % 64));
+
+#ifdef TEST_MEM
+    log("free %d bytes from 0x%x\r\n", node_ptr->chunk_size, ptr);
+#endif
 
     if (node_ptr->sum == 0) // The pageframe can be freed
     {
