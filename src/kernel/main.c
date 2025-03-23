@@ -13,12 +13,15 @@ extern void exec_prog();
 
 void mem_alloc()
 {
-    char sz[STRLEN];
+    char *sz = strtok(NULL, "");
     size_t size;
     void *data;
 
-    printf("Size: ");
-    uart_read_string(sz, STRLEN);
+    if (sz == NULL)
+    {
+        printf("Invalid argument\r\n");
+        return;
+    }
 
     if (sz[0] == '0' && (sz[1] == 'x' || sz[1] == 'X'))
         size = hstr2u32(sz + 2, strlen(sz + 2));
