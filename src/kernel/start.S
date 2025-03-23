@@ -42,9 +42,11 @@ exec_prog:
   str x0, [sp, 8]
   mov x0, 0 
   msr spsr_el1, x0
-  ldr x0, =_sprog
+  adr x0, prog_addr
+  ldr x0, [x0]
   msr elr_el1, x0
-  ldr x0, =_eprog_stack
+  adr x0, prog_stack
+  ldr x0, [x0]
   msr sp_el0, x0
   ldr x0, [sp, 8]
   eret

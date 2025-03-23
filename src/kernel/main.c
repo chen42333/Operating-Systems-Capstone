@@ -197,6 +197,7 @@ int main(void *_dtb_addr)
         {
             load_prog();
             exec_prog();
+            free(prog_addr);
         }
         else if (!strcmp("setTimeout", arg0))
         {

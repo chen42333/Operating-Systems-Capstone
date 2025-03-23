@@ -21,8 +21,7 @@ extern char _edata[];
 extern char _sbss[];
 extern char _ebss[];
 extern char _estack[];
-extern char _sprog[];
-extern char _eprog_stack[];
+extern char _sbrk[];
 
 extern void *dtb_addr;
 extern size_t dtb_len;

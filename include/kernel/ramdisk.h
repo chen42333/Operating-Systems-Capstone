@@ -29,6 +29,8 @@ struct cpio_record
     char payload[];
 };
 
+extern void *prog_addr;
+
 void ls();
 int cat(char *filename);
 bool initramfs_start(void *p, char *name);

@@ -4,13 +4,13 @@
 #include <stdint.h>
 #include "utils.h"
 
-#define HEAP_SIZE 0x20000
+#define HEAP_SIZE 0x8000000
+#define PROG_MEM 0x20000
 
 #define SPIN_TABLE_START (void*)0x0
 #define SPIN_TABLE_END (void*)0x1000
 
 #define PAGE_SIZE (1ULL << 12)
-#define MAX_NUM_PAGES_EXP 18 // log(0x40000000 / PAGE_SIZE)
 #define EMPTY INT_MAX
 #define NEG_ZERO -INT_MAX
 

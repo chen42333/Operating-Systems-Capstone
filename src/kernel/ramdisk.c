@@ -4,10 +4,13 @@
 #include "device_tree.h"
 #include "string.h"
 #include "printf.h"
+#include "mem.h"
 
 void *ramdisk_saddr;
 void *ramdisk_eaddr;
 static int dtb_str_idx = 0;
+void *prog_addr;
+void *prog_stack;
 
 void ls()
 {
@@ -152,9 +155,11 @@ void load_prog()
         if (!strcmp("./simple.img", record->payload))
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
+            prog_addr = malloc(PROG_MEM);
+            prog_stack = prog_addr + file_size;
 
             for (int i = 0; i < file_size; i++)
-                *(_sprog + i) = *(record->payload + offset + i);
+                *((char*)prog_addr + i) = *(record->payload + offset + i);
 
             break;
         }

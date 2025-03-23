@@ -26,7 +26,8 @@ void* memset(void *s, char c, size_t n)
     return s;
 }
 
-static void *heap_ptr = _ebss;
+static void *heap_start = _sbrk;
+static void *heap_ptr = _sbrk;
 
 void* simple_malloc(size_t size)
 {
@@ -46,7 +47,7 @@ void* simple_malloc(size_t size)
 
     ret = heap_ptr + align_padding;
     
-    if ((size_t)heap_ptr + size + align_padding <= (size_t)&_ebss + HEAP_SIZE)
+    if ((size_t)heap_ptr + size + align_padding <= (size_t)heap_start + HEAP_SIZE)
     {
         heap_ptr += (size + align_padding);
         return ret;
@@ -76,11 +77,11 @@ struct
     void *end;
     void *usable_memory[2];
     int num_pages_exp;
-    int arr[1 << MAX_NUM_PAGES_EXP];
-    struct buddy_node *free_blocks_list[MAX_NUM_PAGES_EXP + 1];
+    int *arr;
+    struct buddy_node **free_blocks_list;
 } static buddy_data;
 
-struct buddy_node buddy_node_arr[1 << MAX_NUM_PAGES_EXP];
+struct buddy_node *buddy_node_arr;
 
 inline static bool buddy_list_empty(int list_idx)
 {
@@ -151,6 +152,7 @@ void buddy_init()
 
     buddy_data.end = (void*)(int_ptr + buddy_data.base);
 
+    buddy_node_arr = simple_malloc((1 << buddy_data.num_pages_exp) * sizeof(struct buddy_node));
     for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
     {
         buddy_node_arr[i].idx = i;
@@ -158,9 +160,11 @@ void buddy_init()
         buddy_node_arr[i].next = NULL;
     }
 
+    buddy_data.arr = simple_malloc((1 << buddy_data.num_pages_exp) * sizeof(int));
     for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
         buddy_data.arr[i] = EMPTY;
     
+    buddy_data.free_blocks_list = simple_malloc((buddy_data.num_pages_exp + 1) * sizeof(struct buddy_node*));
     for (int i = 0; i <= buddy_data.num_pages_exp; i++)
         buddy_data.free_blocks_list[i] = NULL;
 
@@ -390,13 +394,14 @@ void memory_reserve(void *start, void *end)
 ////////////////////////////////////////
 
 struct dynamic_node *mem_pool[MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP + 1];
-static struct dynamic_node dynamic_node_arr[1 << MAX_NUM_PAGES_EXP];
+static struct dynamic_node *dynamic_node_arr;
 
 void dynamic_allocator_init()
 {
     for (int i = 0; i <= MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP; i++)
         mem_pool[i] = NULL;
 
+    dynamic_node_arr = simple_malloc((1 << buddy_data.num_pages_exp) * sizeof(struct dynamic_node));
     for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
     {
         dynamic_node_arr[i].addr = buddy_data.base + i * PAGE_SIZE;
@@ -551,7 +556,7 @@ void reserve_mem_regions()
 {
     memory_reserve(SPIN_TABLE_START, SPIN_TABLE_END); // Spin tables for multicore boot
     memory_reserve(_stext, _estack); // Kernel image
-    memory_reserve(_sprog, _eprog_stack); // User program (test)
+    memory_reserve(heap_ptr, heap_ptr + HEAP_SIZE); // Startup allocator
     memory_reserve(ramdisk_saddr, ramdisk_eaddr); // Initramfs
     memory_reserve(dtb_addr, dtb_addr + dtb_len); // Device tree
     // Unusable memory region
