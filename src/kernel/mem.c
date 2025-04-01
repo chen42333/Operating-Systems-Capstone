@@ -112,6 +112,10 @@ static void buddy_delete_free_block(int idx, int list_idx)
 
     // Update the array
     buddy_data.arr[idx] = (list_idx == 0) ? NEG_ZERO : -list_idx; // The first stores the negative value of block size (exp)
+
+#ifdef TEST_MEM
+    log("remove block %d from free list %d\r\n", idx, list_idx);
+#endif
 }
 
 static void buddy_insert_free_block(int idx, int list_idx)
@@ -125,7 +129,11 @@ static void buddy_insert_free_block(int idx, int list_idx)
     buddy_data.free_blocks_list[list_idx] = node_ptr;
 
     // Update the array
-    buddy_data.arr[idx] = list_idx;    
+    buddy_data.arr[idx] = list_idx;  
+    
+#ifdef TEST_MEM
+    log("add block %d to free list %d\r\n", idx, list_idx);
+#endif
 }
 
 void buddy_init()
@@ -210,6 +218,10 @@ void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE*/)
 
     idx = buddy_data.free_blocks_list[list_idx]->idx;
 
+#ifdef TEST_MEM
+    log("allocate block %d\r\n", idx);
+#endif
+
     buddy_delete_free_block(idx, list_idx);
     buddy_cut_block(idx, list_idx, size);
 
@@ -270,6 +282,10 @@ void buddy_free(void *ptr)
     }
 
     list_idx = (buddy_data.arr[idx] == NEG_ZERO) ? 0 : -buddy_data.arr[idx];
+
+#ifdef TEST_MEM
+    log("free block %d\r\n", idx);
+#endif
 
     buddy_insert_free_block(idx, list_idx);
     buddy_merge_block(idx, list_idx);
