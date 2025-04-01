@@ -151,7 +151,7 @@ void elasped_time(void* data)
     printf("%d seconds after booting\r\n", count / freq);
 #endif
 #ifdef BLOCK_TIMER
-    // while (true) ; // For test preemption
+    while (true) ; // For test preemption
 #endif
 }
 
@@ -245,7 +245,7 @@ void tx_int()
 void rx_int_task(void *data)
 {
 #ifdef BLOCK_READ
-    // while (true) ; // For test preemption
+    while (true) ; // For test preemption
 #endif
     ring_buf_produce(&r_buf, (char*)data, CHAR);
     enable_read_int();
