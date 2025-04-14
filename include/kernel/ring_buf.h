@@ -1,7 +1,7 @@
 #ifndef __RING_BUF_H
 #define __RING_BUF_H
 
-#define BUFLEN 256
+#define BUFLEN 512
 
 #include "mem.h"
 
