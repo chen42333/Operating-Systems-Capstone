@@ -148,7 +148,7 @@ void elasped_time(void* data)
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
     add_timer(elasped_time, 2 * freq, NULL);
 #ifdef TEST_INT
-    printf("%d seconds after booting\r\n", count / freq);
+    printf("%ds\r\n", count / freq);
 #endif
 #ifdef BLOCK_TIMER
     while (true) ; // For test preemption
