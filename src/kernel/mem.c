@@ -453,7 +453,7 @@ void* malloc(size_t size)
     while (cur != NULL)
     {
         int num_chunks = PAGE_SIZE / (1 << size_exp);
-        for (int i = cur->cur_idx + 1; ; i = (i + 1) % num_chunks)
+        for (int i = (cur->cur_idx + 1) % num_chunks; ; i = (i + 1) % num_chunks)
         {
             int bitmap_arr_idx = i / 64;
             int bitmap_element_idx = i % 64;
