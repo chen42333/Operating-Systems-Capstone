@@ -4,7 +4,7 @@
 #include "device_tree.h"
 #include "string.h"
 
-#define TEST_MEM
+// #define TEST_MEM
 
 static int dtb_str_idx = 0;
 
