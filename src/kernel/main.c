@@ -7,6 +7,7 @@
 #include "ramdisk.h"
 #include "device_tree.h"
 #include "interrupt.h"
+#include "process.h"
 #include "printf.h"
 
 extern void exec_prog();
@@ -136,6 +137,18 @@ void _free()
     free(ptr);
 }
 
+void foo()
+{
+    struct pcb_t *pcb = get_current();
+
+    for(int i = 0; i < 10; ++i) {
+        printf("PID: %d %d\n", pcb->pid, i);
+        for (int j = 0; j < 1000000; j++)
+            asm volatile("nop");
+        schedule();
+    }
+}
+
 int main(void *_dtb_addr)
 {
     char cmd[STRLEN], *arg0;
@@ -158,6 +171,8 @@ int main(void *_dtb_addr)
     buddy_init();
     dynamic_allocator_init();
     reserve_mem_regions();
+
+    init_pcb();
     
     while (true)
     {
@@ -177,7 +192,8 @@ int main(void *_dtb_addr)
                     "pageAlloc <num>\t: allocate <num> pages from pageframe allocator\r\n"
                     "pageFree <ptr>\t: free pages allocated by pageframe allocator from <ptr>\r\n"
                     "malloc <size>\t: allocate <size> bytes data using dynamic allocator\r\n"
-                    "free <ptr>\t: free data allocated by dynamic allocator at <ptr>\r\n");
+                    "free <ptr>\t: free data allocated by dynamic allocator at <ptr>\r\n"
+                    "thread\t: test multi-thread\r\n");
         else if (!strcmp("hello", arg0))
             printf("Hello World!\r\n");
         else if (!strcmp("mailbox", arg0))
@@ -212,8 +228,16 @@ int main(void *_dtb_addr)
             _malloc();
         else if (!strcmp("free", arg0))
             _free();
+        else if (!strcmp("thread", arg0))
+        {
+            for(int i = 0; i < 5; i++)
+                thread_create(foo);
+            idle();
+        }
         else
             printf("Invalid command\r\n");
     }
+
+    free_init_pcb();
     return 0;
 }
