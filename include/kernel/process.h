@@ -64,6 +64,6 @@ void free_init_pcb();
 void thread_create(void (*func)());
 void schedule();
 void idle();
-void exit();
+void _exit();
 
 #endif

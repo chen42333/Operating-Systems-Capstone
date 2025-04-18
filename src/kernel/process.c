@@ -16,7 +16,7 @@ void init_pcb()
     pcb->next = NULL;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
-    pcb->lr = (uintptr_t)exit;
+    pcb->lr = (uintptr_t)_exit;
 
     pcb_table[0] = pcb;
     set_current(pcb);
@@ -48,7 +48,7 @@ void thread_create(void (*func)())
     pcb->next = NULL;
     pcb->sp = (uintptr_t)&pcb->stack[STACK_SIZE];
     pcb->fp = (uintptr_t)&pcb->stack[STACK_SIZE];
-    pcb->lr = (uintptr_t)exit;
+    pcb->lr = (uintptr_t)_exit;
 
     pcb_table[pid] = pcb;
     last_pid = pid;
@@ -79,7 +79,7 @@ out:
     ; // the following will do the restoration of caller-saved registers and return
 }
 
-void exit()
+void _exit()
 {
     struct pcb_t *pcb = get_current();
 
