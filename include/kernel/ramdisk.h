@@ -35,6 +35,6 @@ void ls();
 int cat(char *filename);
 bool initramfs_start(void *p, char *name);
 bool initramfs_end(void *p, char *name);
-void load_prog();
+int load_prog(char *filename);
 
 #endif

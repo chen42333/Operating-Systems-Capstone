@@ -22,6 +22,12 @@ void ls()
         uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
 
+        if (addr >= ramdisk_eaddr)
+        {
+            err("No TRAILER record\r\n");
+            break;
+        }
+
         if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
         {
             err("Invalid .cpio record\r\n");
@@ -53,6 +59,12 @@ int cat(char *filename)
         struct cpio_record *record = (struct cpio_record*)addr;
         uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
+
+        if (addr >= ramdisk_eaddr)
+        {
+            err("No TRAILER record\r\n");
+            return -1;
+        }
 
         if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
         {
@@ -134,7 +146,7 @@ bool initramfs_end(void *p, char *name)
     return initramfs_process_node(p, name, path, &ramdisk_eaddr);
 }
 
-void load_prog()
+int load_prog(char *filename)
 {
     void *addr = ramdisk_saddr;
     while (true)
@@ -143,6 +155,12 @@ void load_prog()
         uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
 
+        if (addr >= ramdisk_eaddr)
+        {
+            err("No TRAILER record\r\n");
+            return -1;
+        }
+
         if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
         {
             err("Invalid .cpio record\r\n");
@@ -150,18 +168,18 @@ void load_prog()
         }
 
         if (!strcmp("TRAILER!!!", record->payload))
-            break;
+            return -1;
 
-        if (!strcmp("./simple.img", record->payload))
+        if (path_size >= strlen("./") + 1 && !strcmp(filename, record->payload + 2))
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
             prog_addr = malloc(PROG_MEM);
-            prog_stack = prog_addr + file_size;
+            prog_stack = prog_addr + PROG_MEM;
 
             for (int i = 0; i < file_size; i++)
                 *((char*)prog_addr + i) = *(record->payload + offset + i);
 
-            break;
+            return 0;
         }
 
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);

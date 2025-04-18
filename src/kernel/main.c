@@ -185,9 +185,9 @@ int main(void *_dtb_addr)
                     "mailbox\t: print hardware's information\r\n"
                     "reboot\t: reboot the device\r\n"
                     "ls\t: list all the files in ramdisk\r\n"
-                    "cat\t: show the content of file1\r\n"
+                    "cat <filename>\t: show the content of <filename>\r\n"
                     "memAlloc <size>\t: allocate <size> bytes data using simple allocator\r\n"
-                    "ldProg\t: execute the specified program in the ramdisk\r\n"
+                    "ldProg <filename>\t: execute <filename> in the ramdisk\r\n"
                     "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n"
                     "pageAlloc <num>\t: allocate <num> pages from pageframe allocator\r\n"
                     "pageFree <ptr>\t: free pages allocated by pageframe allocator from <ptr>\r\n"
@@ -211,9 +211,13 @@ int main(void *_dtb_addr)
             mem_alloc();
         else if (!strcmp("ldProg", arg0))
         {
-            load_prog();
-            exec_prog();
-            free(prog_addr);
+            if (load_prog(strtok(NULL, "")) < 0)
+                printf("File not found\r\n");
+            else
+            {
+                exec_prog();
+                free(prog_addr);
+            }
         }
         else if (!strcmp("setTimeout", arg0))
         {
