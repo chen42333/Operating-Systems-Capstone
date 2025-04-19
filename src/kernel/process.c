@@ -1,8 +1,9 @@
 #include "process.h"
 #include "mem.h"
+#include "queue.h"
 
 pid_t last_pid = 0;
-struct process_queue ready_queue, dead_queue;
+struct queue ready_queue, dead_queue;
 struct pcb_t *pcb_table[MAX_PROC];
 
 void init_pcb()
@@ -13,7 +14,6 @@ void init_pcb()
     pcb->pid = 0;
     pcb->pc = idle;
     pcb->state = RUN;
-    pcb->next = NULL;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
     pcb->lr = (uintptr_t)_exit;
@@ -45,7 +45,6 @@ void thread_create(void (*func)())
     pcb->pid = pid;
     pcb->pc = func;
     pcb->state = READY;
-    pcb->next = NULL;
     pcb->sp = (uintptr_t)&pcb->stack[STACK_SIZE];
     pcb->fp = (uintptr_t)&pcb->stack[STACK_SIZE];
     pcb->lr = (uintptr_t)_exit;
@@ -81,10 +80,19 @@ out:
 
 void _exit()
 {
-    struct pcb_t *pcb = get_current();
+    struct pcb_t *pcb = get_current(), *next;
 
     pcb->state = DEAD;
     process_queue_push(&dead_queue, pcb);
+
+    if (process_queue_empty(&ready_queue))
+        return;
+
+    next = process_queue_pop(&ready_queue);
+    next->state = RUN;
+    set_current(next);
+
+    switch_to(pcb->reg, next->reg, next->pc);
 }
 
 static void kill_zombies()

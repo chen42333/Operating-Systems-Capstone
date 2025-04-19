@@ -23,38 +23,7 @@ struct pcb_t
     uint8_t stack[STACK_SIZE];
     stat state;
     // uint64_t pstate;
-    struct pcb_t *next;
 };
-
-struct process_queue
-{
-    struct pcb_t *head;
-    struct pcb_t *tail;
-};
-
-inline static bool process_queue_empty(struct process_queue *q)
-{
-    return !q->head;
-}
-
-inline static void process_queue_push(struct process_queue *q, struct pcb_t *pcb)
-{
-    if (q->tail)
-        q->tail->next = pcb;
-    else
-        q->head = pcb;
-    q->tail = pcb;
-}
-
-inline static struct pcb_t* process_queue_pop(struct process_queue *q)
-{
-    struct pcb_t *ret = q->head;
-    
-    if (!process_queue_empty(q))
-        q->head = q->head->next;
-
-    return ret;
-}
 
 extern struct pcb_t* get_current();
 extern void set_current(struct pcb_t *pcb);
