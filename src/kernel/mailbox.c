@@ -3,17 +3,19 @@
 #include "mailbox.h"
 #include "printf.h"
 
-static void mailbox_call(uint32_t *mailbox)
+int mbox_call(unsigned char channel, uint32_t *mailbox)
 {
-    uint32_t data = ((unsigned long)mailbox & ~0xf) | 8;
+    uint32_t data = ((unsigned long)mailbox & ~0xf) | channel;
 
     while (get32(MAILBOX_STATUS) & MAILBOX_FULL) ;
     set32(MAILBOX_WRITE, data);
     while (get32(MAILBOX_STATUS) & MAILBOX_EMPTY) ;
     while (get32(MAILBOX_READ) != data) ;
+
+    return mailbox[1] == REQUEST_SUCCEED;
 }
 
-static void mailbox_request(int n_buf, uint32_t tag, uint32_t *data)
+static void mailbox_request(int n_buf, uint32_t tag, unsigned char channel, uint32_t *data)
 {
     int n = n_buf + 6;
     __attribute__((aligned(16))) uint32_t mailbox[n];
@@ -26,7 +28,7 @@ static void mailbox_request(int n_buf, uint32_t tag, uint32_t *data)
         mailbox[i] = 0; // buffer
     mailbox[n - 1] = END_TAG;
 
-    mailbox_call(mailbox);
+    mbox_call(channel, mailbox);
 
     for (int i = 0; i < n_buf; i++)
         data[i] = mailbox[5 + i];
@@ -36,7 +38,7 @@ static void get_board_revision()
 {
     int n_buf = 1;
     uint32_t data[n_buf];
-    mailbox_request(n_buf, GET_BOARD_REVISION, data);
+    mailbox_request(n_buf, GET_BOARD_REVISION, 8, data);
 
     printf("Board revision: 0x%x\r\n", data[0]);
 }
@@ -45,7 +47,7 @@ static void get_memory_info()
 {
     int n_buf = 2;
     uint32_t data[n_buf];
-    mailbox_request(2, GET_ARM_MEMORY, data);
+    mailbox_request(n_buf, GET_ARM_MEMORY, 8, data);
 
     printf("ARM memory base address: 0x%x\r\n", data[0]);
     printf("ARM memory size: 0x%x\r\n", data[1]);
