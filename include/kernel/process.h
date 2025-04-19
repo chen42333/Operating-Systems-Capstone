@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "utils.h"
+#include "list.h"
 
 #define MAX_PROC 1024
 #define STACK_SIZE 4096
@@ -24,6 +25,9 @@ struct pcb_t
     stat state;
     // uint64_t pstate;
 };
+
+extern struct list ready_queue, dead_queue;
+extern struct pcb_t *pcb_table[MAX_PROC];
 
 extern struct pcb_t* get_current();
 extern void set_current(struct pcb_t *pcb);

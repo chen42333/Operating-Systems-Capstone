@@ -1,9 +1,8 @@
 #include "process.h"
 #include "mem.h"
-#include "queue.h"
 
 pid_t last_pid = 0;
-struct queue ready_queue, dead_queue;
+struct list ready_queue, dead_queue;
 struct pcb_t *pcb_table[MAX_PROC];
 
 void init_pcb()
@@ -52,23 +51,23 @@ void thread_create(void (*func)())
     pcb_table[pid] = pcb;
     last_pid = pid;
 
-    process_queue_push(&ready_queue, pcb);
+    list_push(&ready_queue, pcb);
 }
 
 void schedule()
 {
     struct pcb_t *prev, *next;
 
-    if (process_queue_empty(&ready_queue))
+    if (list_empty(&ready_queue))
         return;
 
     prev = get_current();
     prev->state = READY;
-    process_queue_push(&ready_queue, prev);
+    list_push(&ready_queue, prev);
 
     prev->pc = &&out;
 
-    next = process_queue_pop(&ready_queue);
+    next = list_pop(&ready_queue);
     next->state = RUN;
     set_current(next);
 
@@ -83,12 +82,12 @@ void _exit()
     struct pcb_t *pcb = get_current(), *next;
 
     pcb->state = DEAD;
-    process_queue_push(&dead_queue, pcb);
+    list_push(&dead_queue, pcb);
 
-    if (process_queue_empty(&ready_queue))
+    if (list_empty(&ready_queue))
         return;
 
-    next = process_queue_pop(&ready_queue);
+    next = list_pop(&ready_queue);
     next->state = RUN;
     set_current(next);
 
@@ -97,13 +96,13 @@ void _exit()
 
 static void kill_zombies()
 {
-    struct pcb_t *pcb = process_queue_pop(&dead_queue);
+    struct pcb_t *pcb = list_pop(&dead_queue);
 
     while (pcb)
     {
         pcb_table[pcb->pid] = NULL;
         free(pcb);
-        pcb = process_queue_pop(&dead_queue);
+        pcb = list_pop(&dead_queue);
     }
 }
 
