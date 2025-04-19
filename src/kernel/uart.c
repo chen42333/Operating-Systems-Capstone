@@ -62,9 +62,19 @@ int uart_write_char(char c)
     return 0;
 }
 
-int uart_read_string(char *str, uint32_t size)
+size_t uart_write(const char buf[], size_t size)
 {
-    int i;
+    size_t i;
+
+    for (i = 0; i < size; i++)
+        uart_write_char(buf[i]);
+
+    return i;
+}
+
+size_t uart_read_string(char *str, size_t size)
+{
+    size_t i;
     char c;
 
     enable_read_int();
@@ -101,6 +111,24 @@ int uart_read_string(char *str, uint32_t size)
     }
 
     str[i] = '\0';
+
+    disable_read_int();
+
+    return i;
+}
+
+size_t uart_read(char buf[], size_t size)
+{
+    size_t i;
+    char c;
+
+    enable_read_int();
+
+    for (i = 0; i < size; i++)
+    {
+        ring_buf_consume(&r_buf, &c, CHAR);
+        buf[i] = c;
+    }
 
     disable_read_int();
 

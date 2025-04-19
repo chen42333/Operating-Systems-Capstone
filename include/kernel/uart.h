@@ -24,7 +24,9 @@
 void enable_uart_int();
 void uart_init();
 int uart_write_char(char c);
-int uart_read_string(char *str, uint32_t size);
+size_t uart_write(const char buf[], size_t size);
+size_t uart_read_string(char *str, size_t size);
+size_t uart_read(char buf[], size_t size);
 
 inline static void enable_read_int()
 {
