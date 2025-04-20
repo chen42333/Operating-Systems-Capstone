@@ -19,6 +19,7 @@ typedef enum stat { RUN, READY, WAIT, DEAD } stat;
 struct pcb_t
 {
     pid_t pid;
+    void *args;
     uint64_t reg[NR_CALLEE_REGS];
     void *pc;
     uint8_t stack[STACK_SIZE];
@@ -34,7 +35,7 @@ extern void set_current(struct pcb_t *pcb);
 extern void switch_to(uint64_t *prev_reg, uint64_t *next_reg, void *next_pc);
 void init_pcb();
 void free_init_pcb();
-void thread_create(void (*func)());
+pid_t thread_create(void (*func)(void *args), void *args);
 void schedule();
 void idle();
 void _exit();

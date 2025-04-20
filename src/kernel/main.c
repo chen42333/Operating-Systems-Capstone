@@ -18,7 +18,7 @@ void page_alloc();
 void page_free();
 void _malloc();
 void _free();
-void foo();
+void foo(void *args);
 
 int main(void *_dtb_addr)
 {
@@ -106,7 +106,7 @@ int main(void *_dtb_addr)
         else if (!strcmp("thread", arg0))
         {
             for(int i = 0; i < 5; i++)
-                thread_create(foo);
+                thread_create(foo, NULL);
             idle();
         }
         else
@@ -242,7 +242,7 @@ void _free()
     free(ptr);
 }
 
-void foo()
+void foo(void *args)
 {
     struct pcb_t *pcb = get_current();
 

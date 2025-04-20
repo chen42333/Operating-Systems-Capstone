@@ -26,7 +26,7 @@ void free_init_pcb()
     free(pcb_table[0]);
 }
 
-void thread_create(void (*func)())
+pid_t thread_create(void (*func)(void *args), void *args)
 {
     struct pcb_t *pcb;
     pid_t pid;
@@ -36,13 +36,14 @@ void thread_create(void (*func)())
         if (pid == last_pid)
         {
             err("Cannot create more threads\r\n");
-            return;
+            return -1;
         }
     }
 
     pcb = calloc(1, sizeof(struct pcb_t));
     pcb->pid = pid;
     pcb->pc = func;
+    pcb->args = args;
     pcb->state = READY;
     pcb->sp = (uintptr_t)&pcb->stack[STACK_SIZE];
     pcb->fp = (uintptr_t)&pcb->stack[STACK_SIZE];
@@ -52,6 +53,8 @@ void thread_create(void (*func)())
     last_pid = pid;
 
     list_push(&ready_queue, pcb);
+
+    return pid;
 }
 
 void schedule()
