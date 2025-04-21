@@ -77,7 +77,7 @@ void schedule()
     switch_to(prev->reg, next->reg, next->pc);
 
 out:
-    ; // the following will do the restoration of caller-saved registers and return
+    ; // the following will do the restoration of fp and lr
 }
 
 void _exit()
