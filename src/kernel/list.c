@@ -24,7 +24,10 @@ void* list_pop(struct list *l)
     {
         ret = head->ptr;
         l->head = l->head->next;
-        l->head->prev = NULL;
+        if (l->head)
+            l->head->prev = NULL;
+        else
+            l->tail = NULL;
         free(head);
     }
 
