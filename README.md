@@ -40,7 +40,7 @@ make bootloader
 ```
 3. Test
 ```
-make test _QEMUFLAGS=<additional flags> TARGET=<target>
+make test [_QEMUFLAGS=<additional flags>] [TARGET=<target>] [DISPLAY=true]
 ```
 - `test` can be replaced with
     - `test-pty`: open a pseudo terminal
@@ -48,6 +48,7 @@ make test _QEMUFLAGS=<additional flags> TARGET=<target>
     - `test-int`: dump interrupts
     - For combined or other functions, add the flags in `<additional flags>`
 - `<target>`: `kernel` (default) or `bootloader`
+- Use `DISPLAY=true` to let QEMU display video output
 4. Test with LLDB/GDB (optional)
 ```
 make debug _QEMUFLAGS=<additional flags> TARGET=<target> 

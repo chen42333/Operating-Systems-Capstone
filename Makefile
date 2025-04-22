@@ -7,9 +7,13 @@ LDFLAGS = -m aarch64elf
 OBJCPY = llvm-objcopy
 OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 QEMU = qemu-system-aarch64
-QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -display none -serial null -initrd $(RAMDISK) -dtb $(DEVICE_TREE)
+QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -serial null -initrd $(RAMDISK) -dtb $(DEVICE_TREE)
 _QEMUFLAGS = 
 QEMUFLAGS += $(_QEMUFLAGS)
+
+ifneq ($(DISPLAY),true)
+	QEMUFLAGS += -display none
+endif
 
 KERNEL_TARGET = kernel8.img
 BOOTLOADER_TARGET = bootloader.img

@@ -13,6 +13,8 @@
 // #define BLOCK_READ
 // #define BLOCK_TIMER
 
+#define EL0_FREQ_REG_ACCESS // Give EL0 the permission to access timer frequency register or not
+
 struct ring_buf timer_queue, task_queue;
 struct timer_queue_element timer_queue_buf[BUFLEN];
 struct task_queue_element task_queue_buf[BUFLEN];
@@ -154,7 +156,8 @@ void elasped_time(void* data)
     uint64_t freq;
 
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
-    add_timer(elasped_time, freq / 1000 * TIMER_INT, NULL);
+    // add_timer(elasped_time, freq / 1000 * TIMER_INT, NULL);
+    add_timer(elasped_time, freq >> 5, NULL);
     need_schedule = true;
 #ifdef TEST_INT
     uint64_t count;
@@ -185,6 +188,12 @@ void init_timer_queue()
 
 void core_timer_enable()
 {
+#ifdef EL0_FREQ_REG_ACCESS
+    uint64_t tmp;
+    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+    tmp |= 1;
+    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+#endif
     enable_timer_int();
     init_timer_queue();
     set32(CORE0_TIMER_IRQ_CTRL, 2); // unmask timer interrupt
