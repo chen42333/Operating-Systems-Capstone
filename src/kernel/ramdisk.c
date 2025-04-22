@@ -10,7 +10,6 @@ void *ramdisk_saddr;
 void *ramdisk_eaddr;
 static int dtb_str_idx = 0;
 void *prog_addr;
-void *prog_stack;
 
 void ls()
 {
@@ -37,7 +36,7 @@ void ls()
         if (!strcmp("TRAILER!!!", record->payload))
             break;
         
-        if (!strcmp(".", record->payload))
+        if (!strcmp(".", record->payload) || strncmp("./", record->payload, 2))
             printf("%s\r\n", record->payload);
         else
             printf("%s\r\n", record->payload + 2);
@@ -75,7 +74,7 @@ int cat(char *filename)
         if (!strcmp("TRAILER!!!", record->payload))
             return -1;
 
-        if (path_size >= strlen("./") + 1 && !strcmp(filename, record->payload + 2))
+        if ((!strncmp("./", record->payload, 2) && !strcmp(filename, record->payload + 2)) || (strncmp("./", record->payload, 2) && !strcmp(filename, record->payload)) )
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
 
@@ -170,11 +169,10 @@ int load_prog(char *filename)
         if (!strcmp("TRAILER!!!", record->payload))
             return -1;
 
-        if (path_size >= strlen("./") + 1 && !strcmp(filename, record->payload + 2))
+        if ((!strncmp("./", record->payload, 2) && !strcmp(filename, record->payload + 2)) || (strncmp("./", record->payload, 2) && !strcmp(filename, record->payload)) )
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
-            prog_addr = malloc(PROG_MEM);
-            prog_stack = prog_addr + PROG_MEM;
+            prog_addr = malloc(file_size);
 
             for (int i = 0; i < file_size; i++)
                 *((char*)prog_addr + i) = *(record->payload + offset + i);

@@ -6,8 +6,9 @@ OS: MacOS
 ## Running on RPI3
 1. Build kernel
 ```
-make kernel
+make kernel [TEST_PROG_NAME=<name>]
 ```
+- Use `TEST_PROG_NAME` to compile specific test program under `testprog/` and put it into the ramdisk (default is `simple`)
 2. Build UART bootloader
 ```
 make bootloader
@@ -31,7 +32,7 @@ minicom -D <tty-dev-path> -b 115200 -o
 ## Test on QEMU
 1. Build kernel
 ```
-make kernel
+make kernel [TEST_PROG_NAME=<name>]
 ```
 2. Build UART bootloader
 ```

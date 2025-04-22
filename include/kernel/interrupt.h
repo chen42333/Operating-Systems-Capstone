@@ -6,6 +6,7 @@
 #include "utils.h"
 
 #define CORE0_TIMER_IRQ_CTRL (void*)0x40000040
+#define TIMER_INT 10 // ms
 
 extern struct ring_buf task_queue;
 extern struct task_queue_element task_queue_buf[BUFLEN];

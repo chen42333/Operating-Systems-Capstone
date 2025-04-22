@@ -5,7 +5,6 @@
 #include "utils.h"
 
 #define HEAP_SIZE 0x8000000
-#define PROG_MEM 0x20000
 
 #define SPIN_TABLE_START (void*)0x0
 #define SPIN_TABLE_END (void*)0x1000

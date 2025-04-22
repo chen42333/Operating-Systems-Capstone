@@ -6,7 +6,7 @@
 var: .skip 8 
 
 .section .text._start
-.global _start, exec_prog
+.global _start
 
 _start:
   mov x28, x0 // .dtb address
@@ -37,16 +37,3 @@ _end_loop1:
   mov sp, x0
   mov x0, x28
   b main
-  
-exec_prog:
-  str x0, [sp, 8]
-  mov x0, 0 
-  msr spsr_el1, x0
-  adr x0, prog_addr
-  ldr x0, [x0]
-  msr elr_el1, x0
-  adr x0, prog_stack
-  ldr x0, [x0]
-  msr sp_el0, x0
-  ldr x0, [sp, 8]
-  eret

@@ -9,8 +9,7 @@
 #include "interrupt.h"
 #include "process.h"
 #include "printf.h"
-
-extern void exec_prog();
+#include "syscall.h"
 
 /* Test functions */
 void mem_alloc();
@@ -19,6 +18,7 @@ void page_free();
 void _malloc();
 void _free();
 void foo(void *args);
+void fork_test();
 
 int main(void *_dtb_addr)
 {
@@ -58,13 +58,14 @@ int main(void *_dtb_addr)
                     "ls\t: list all the files in ramdisk\r\n"
                     "cat <filename>\t: show the content of <filename>\r\n"
                     "memAlloc <size>\t: allocate <size> bytes data using simple allocator\r\n"
-                    "ldProg <filename>\t: execute <filename> in the ramdisk\r\n"
+                    "ldProg <filename>: execute <filename> in the ramdisk\r\n"
                     "setTimeout <msg> <time>: print <msg> after <time> seconds\r\n"
                     "pageAlloc <num>\t: allocate <num> pages from pageframe allocator\r\n"
                     "pageFree <ptr>\t: free pages allocated by pageframe allocator from <ptr>\r\n"
                     "malloc <size>\t: allocate <size> bytes data using dynamic allocator\r\n"
                     "free <ptr>\t: free data allocated by dynamic allocator at <ptr>\r\n"
-                    "thread\t: test multi-thread\r\n");
+                    "thread\t: test multi-thread\r\n"
+                    "forkTest\t: run fork_test (built-in, at EL1)\r\n");
         else if (!strcmp("hello", arg0))
             printf("Hello World!\r\n");
         else if (!strcmp("mailbox", arg0))
@@ -82,13 +83,8 @@ int main(void *_dtb_addr)
             mem_alloc();
         else if (!strcmp("ldProg", arg0))
         {
-            if (load_prog(strtok(NULL, "")) < 0)
-                printf("File not found\r\n");
-            else
-            {
-                exec_prog();
-                free(prog_addr);
-            }
+            if (fork() == 0)
+                exec(strtok(NULL, ""), NULL);
         }
         else if (!strcmp("setTimeout", arg0))
         {
@@ -109,6 +105,8 @@ int main(void *_dtb_addr)
                 thread_create(foo, NULL);
             idle();
         }
+        else if (!strcmp("forkTest", arg0))
+            fork_test();
         else
             printf("Invalid command\r\n");
     }
@@ -251,5 +249,35 @@ void foo(void *args)
         for (int j = 0; j < 1000000; j++)
             asm volatile("nop");
         schedule();
+    }
+}
+
+void fork_test(){
+    printf("\nFork Test, pid %d\n", getpid());
+    int cnt = 1;
+    int ret = 0;
+    if ((ret = fork()) == 0) { // child
+        long long cur_sp;
+        asm volatile("mov %0, sp" : "=r"(cur_sp));
+        printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+        ++cnt;
+
+        if ((ret = fork()) != 0){
+            asm volatile("mov %0, sp" : "=r"(cur_sp));
+            printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+        }
+        else{
+            while (cnt < 5) {
+                asm volatile("mov %0, sp" : "=r"(cur_sp));
+                printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+                for (int i = 0; i < 1000000; i++)
+                    asm volatile("nop");
+                ++cnt;
+            }
+        }
+        exit();
+    }
+    else {
+        printf("parent here, pid %d, child %d\n", getpid(), ret);
     }
 }

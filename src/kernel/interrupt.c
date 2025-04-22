@@ -3,6 +3,7 @@
 #include "mem.h"
 #include "interrupt.h"
 #include "printf.h"
+#include "process.h"
 
 // For test exception and interrupt handler
 // #define TEST_EXCEPTION
@@ -17,6 +18,7 @@ struct timer_queue_element timer_queue_buf[BUFLEN];
 struct task_queue_element task_queue_buf[BUFLEN];
 extern struct ring_buf r_buf, w_buf;
 static enum prio cur_priority = INIT_PRIO;
+bool need_schedule = false;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 {
@@ -118,6 +120,12 @@ void timer_int()
     add_task(process_timer, TIMER_PRIO, &timer_data);
 
     process_task(NULL);
+
+    if (need_schedule)
+    {
+        need_schedule = false;
+        schedule();
+    }
 }
 
 void process_timer(void *data)
@@ -127,6 +135,8 @@ void process_timer(void *data)
 
     element_ptr = (struct timer_queue_element*)data;
 
+    element_ptr->handler(element_ptr->data);
+
     // Program the next timer interrupt
     if (!ring_buf_empty(&timer_queue))
     {
@@ -135,19 +145,21 @@ void process_timer(void *data)
         ival = next_element_ptr->cur_ticks + next_element_ptr->duration_ticks - count;
         asm volatile ("msr cntp_tval_el0, %0" :: "r"(ival));
     }
-
-    element_ptr->handler(element_ptr->data);
+    
     enable_timer_int();
 }
 
 void elasped_time(void* data)
 {
-    uint64_t count, freq;
+    uint64_t freq;
+
+    asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
+    add_timer(elasped_time, freq / 1000 * TIMER_INT, NULL);
+    need_schedule = true;
+#ifdef TEST_INT
+    uint64_t count;
 
     asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
-    asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
-    add_timer(elasped_time, 2 * freq, NULL);
-#ifdef TEST_INT
     printf("%ds\r\n", count / freq);
 #endif
 #ifdef BLOCK_TIMER
@@ -168,7 +180,7 @@ void init_timer_queue()
     ring_buf_init(&timer_queue, timer_queue_buf);
 
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
-    add_timer(elasped_time, freq * 2, NULL);
+    add_timer(elasped_time, freq / 1000 * TIMER_INT, NULL);
 }
 
 void core_timer_enable()

@@ -1,8 +1,9 @@
 #include "process.h"
 #include "mem.h"
+#include "syscall.h"
 
 pid_t last_pid = 0;
-struct list ready_queue, dead_queue;
+struct list ready_queue, wait_queue, dead_queue;
 struct pcb_t *pcb_table[MAX_PROC];
 
 void init_pcb()
@@ -13,6 +14,10 @@ void init_pcb()
     pcb->pid = 0;
     pcb->pc = idle;
     pcb->state = RUN;
+    pcb->el = 1;
+    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    pcb->sp_el = (uint64_t)_estack;
+    pcb->stack = (uint8_t*)_estack;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
     pcb->lr = (uintptr_t)_exit;
@@ -45,8 +50,12 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->pc = func;
     pcb->args = args;
     pcb->state = READY;
-    pcb->sp = (uintptr_t)&pcb->stack[STACK_SIZE];
-    pcb->fp = (uintptr_t)&pcb->stack[STACK_SIZE];
+    pcb->el = 1;
+    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    pcb->stack = malloc(STACK_SIZE) + STACK_SIZE;
+    pcb->sp_el = (uint64_t)pcb->stack;
+    pcb->sp = (uint64_t)pcb->stack;
+    pcb->fp = (uint64_t)pcb->stack;
     pcb->lr = (uintptr_t)_exit;
 
     pcb_table[pid] = pcb;
@@ -74,7 +83,13 @@ void schedule()
     next->state = RUN;
     set_current(next);
 
-    switch_to(prev->reg, next->reg, next->pc);
+    // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
+    if (prev->el == 0)
+        asm volatile("mrs %0, sp_el0" : "=r"(prev->sp_el));
+    if (next->el == 0)
+        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el));
+    prev->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
 
 out:
     ; // the following will do the restoration of fp and lr
@@ -82,19 +97,13 @@ out:
 
 void _exit()
 {
-    struct pcb_t *pcb = get_current(), *next;
-
-    pcb->state = DEAD;
-    list_push(&dead_queue, pcb);
-
-    if (list_empty(&ready_queue))
-        return;
-
-    next = list_pop(&ready_queue);
-    next->state = RUN;
-    set_current(next);
-
-    switch_to(pcb->reg, next->reg, next->pc);
+    if (get_current()->el == 0)
+    {
+        register int syscall_id __asm__("x8") = 5;
+        asm volatile ("svc #0":: "r"(syscall_id): "memory");
+    }
+    else
+        exit();
 }
 
 static void kill_zombies()

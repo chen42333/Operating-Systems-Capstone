@@ -20,19 +20,21 @@ struct pcb_t
 {
     pid_t pid;
     void *args;
+    int el;
     uint64_t reg[NR_CALLEE_REGS];
+    uint64_t sp_el;
     void *pc;
-    uint8_t stack[STACK_SIZE];
+    uint8_t *stack;
     stat state;
-    // uint64_t pstate;
+    uint64_t pstate;
 };
 
-extern struct list ready_queue, dead_queue;
+extern struct list ready_queue, wait_queue, dead_queue;
 extern struct pcb_t *pcb_table[MAX_PROC];
 
 extern struct pcb_t* get_current();
 extern void set_current(struct pcb_t *pcb);
-extern void switch_to(uint64_t *prev_reg, uint64_t *next_reg, void *next_pc);
+extern void switch_to(uint64_t *prev_reg, uint64_t *next_reg, void *next_pc, uint64_t next_pstat, void *next_args);
 void init_pcb();
 void free_init_pcb();
 pid_t thread_create(void (*func)(void *args), void *args);
