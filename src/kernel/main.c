@@ -44,6 +44,7 @@ int main(void *_dtb_addr)
     reserve_mem_regions();
 
     init_pcb();
+    thread_create(idle, NULL);
     
     while (true)
     {
