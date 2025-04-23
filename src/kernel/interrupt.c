@@ -123,6 +123,7 @@ void timer_int()
 
     process_task(NULL);
 
+    asm volatile ("msr DAIFSet, 0b10"); // Disable interrupt
     if (need_schedule)
     {
         need_schedule = false;
@@ -246,6 +247,10 @@ void process_task(struct task_queue_element *task)
 void tx_int_task(void *data)
 {
     set8(AUX_MU_IO_REG, *(char*)data);
+
+    if (!list_empty(&wait_queue[WRITE]) && 
+    ring_buf_remain_e(&w_buf) >= ((struct wait_q_e*)list_top(&wait_queue[WRITE]))->data)
+        wait_to_ready(list_pop(&wait_queue[WRITE]));
     
     if (!ring_buf_empty(&w_buf))
         enable_write_int();
@@ -269,6 +274,11 @@ void rx_int_task(void *data)
     while (true) ; // For test preemption
 #endif
     ring_buf_produce(&r_buf, (char*)data, CHAR);
+
+    if (!list_empty(&wait_queue[READ]) && 
+    ring_buf_num_e(&r_buf) >= ((struct wait_q_e*)list_top(&wait_queue[READ]))->data)
+        wait_to_ready(list_pop(&wait_queue[READ]));
+
     enable_read_int();
 }
 

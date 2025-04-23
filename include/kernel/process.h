@@ -15,6 +15,7 @@
 typedef int pid_t;
 
 typedef enum stat { RUN, READY, WAIT, DEAD } stat;
+typedef enum event { PROC, READ, WRITE, _LAST } event;
 
 struct pcb_t
 {
@@ -26,10 +27,17 @@ struct pcb_t
     void *pc;
     uint8_t *stack;
     stat state;
+    struct list *wait_q;
     uint64_t pstate;
 };
 
-extern struct list ready_queue, wait_queue, dead_queue;
+struct wait_q_e
+{
+    struct pcb_t *pcb;
+    size_t data;
+};
+
+extern struct list ready_queue, dead_queue, wait_queue[_LAST];
 extern struct pcb_t *pcb_table[MAX_PROC];
 
 extern struct pcb_t* get_current();
@@ -41,5 +49,7 @@ pid_t thread_create(void (*func)(void *args), void *args);
 void schedule();
 void idle();
 void _exit();
+void wait(event e, size_t data);
+void wait_to_ready(void *ptr);
 
 #endif

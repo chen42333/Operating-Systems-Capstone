@@ -3,7 +3,7 @@
 #include "syscall.h"
 
 pid_t last_pid = 0;
-struct list ready_queue, wait_queue, dead_queue;
+struct list ready_queue, dead_queue, wait_queue[_LAST];
 struct pcb_t *pcb_table[MAX_PROC];
 
 void init_pcb()
@@ -20,7 +20,7 @@ void init_pcb()
     pcb->stack = (uint8_t*)_estack;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
-    pcb->lr = (uintptr_t)_exit;
+    pcb->lr = (uintptr_t)exit;
 
     pcb_table[0] = pcb;
     set_current(pcb);
@@ -56,7 +56,7 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->sp_el = (uint64_t)pcb->stack;
     pcb->sp = (uint64_t)pcb->stack;
     pcb->fp = (uint64_t)pcb->stack;
-    pcb->lr = (uintptr_t)_exit;
+    pcb->lr = (uintptr_t)exit;
 
     pcb_table[pid] = pcb;
     last_pid = pid;
@@ -97,13 +97,8 @@ out:
 
 void _exit()
 {
-    if (get_current()->el == 0)
-    {
-        register int syscall_id __asm__("x8") = 5;
-        asm volatile ("svc #0":: "r"(syscall_id): "memory");
-    }
-    else
-        exit();
+    register int syscall_id __asm__("x8") = 5;
+    asm volatile ("svc #0":: "r"(syscall_id): "memory");
 }
 
 static void kill_zombies()
@@ -123,6 +118,49 @@ void idle()
     while (true)
     {
         kill_zombies();
-        schedule();
+        // schedule();
     }
+}
+
+void wait(event e, size_t data)
+{
+    struct pcb_t *pcb = get_current(), *next;
+    struct wait_q_e *w = malloc(sizeof(struct wait_q_e));
+
+    w->pcb = pcb;
+    w->data = data;
+    pcb->state = WAIT;
+    pcb->wait_q = &wait_queue[e];
+    list_push(&wait_queue[e], w);
+
+    pcb->pc = &&out;
+
+    if (list_empty(&ready_queue))
+        return;
+
+    next = list_pop(&ready_queue);
+    next->state = RUN;
+    set_current(next);
+
+    // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
+    if (pcb->el == 0)
+        asm volatile("mrs %0, sp_el0" : "=r"(pcb->sp_el));
+    if (next->el == 0)
+        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el));
+    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    switch_to(pcb->reg, next->reg, next->pc, next->pstate, next->args);
+
+out:
+    ; // the following will do the restoration of fp and lr
+}
+
+void wait_to_ready(void *ptr)
+{
+    struct wait_q_e *e = (struct wait_q_e*)ptr;
+    struct pcb_t *pcb = e->pcb;
+    
+    free(e);
+    pcb->state = READY;
+    pcb->wait_q = NULL;
+    list_push(&ready_queue, pcb);
 }

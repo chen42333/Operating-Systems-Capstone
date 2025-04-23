@@ -43,7 +43,7 @@ inline static void ring_buf_init(struct ring_buf *rb, void *buf_ptr)
 inline static bool ring_buf_full(struct ring_buf *rb)
 {
     // Wasting 1 byte to differentiate empty/full
-    return (rb->producer_idx + 1) % BUFLEN == rb->consumer_idx;
+    return (rb->producer_idx + 1) % BUFLEN == rb->consumer_idx; 
 }
 
 inline static bool ring_buf_empty(struct ring_buf *rb)
@@ -51,8 +51,18 @@ inline static bool ring_buf_empty(struct ring_buf *rb)
     return rb->producer_idx == rb->consumer_idx;
 }
 
-inline static void ring_buf_produce(struct ring_buf *rb, void *data, enum buf_type type)
+inline static int ring_buf_num_e(struct ring_buf *rb)
 {
+    return (rb->producer_idx - rb->consumer_idx) % BUFLEN;
+}
+
+inline static int ring_buf_remain_e(struct ring_buf *rb)
+{
+    return BUFLEN - 1 - (rb->producer_idx - rb->consumer_idx) % BUFLEN;
+}
+
+inline static void ring_buf_produce(struct ring_buf *rb, void *data, enum buf_type type)
+{    
     while (ring_buf_full(rb)) ;
 
     switch (type)

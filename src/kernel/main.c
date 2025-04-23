@@ -84,8 +84,12 @@ int main(void *_dtb_addr)
             mem_alloc();
         else if (!strcmp("ldProg", arg0))
         {
-            if (fork() == 0)
+            pid_t pid = fork();
+
+            if (pid == 0)
                 exec(strtok(NULL, ""), NULL);
+            else
+                wait(PROC, pid);
         }
         else if (!strcmp("setTimeout", arg0))
         {
@@ -282,3 +286,10 @@ void fork_test(){
         printf("parent here, pid %d, child %d\n", getpid(), ret);
     }
 }
+
+/*
+ldProg syscall.img
+
+fork後 -> 0x82410ec
+mbox call在0x824112c
+*/

@@ -47,10 +47,14 @@ int exec(const char* name, char *const argv[])
     struct pcb_t *pcb = get_current();
 
     if (load_prog((char*)name) < 0)
+    {
+        printf("File not found\r\n");
         return -1;
+    }
     
     pcb->el = 0;
     pcb->pstate = 0x0; // EL0 with unmasked DAIF
+    pcb->lr = (uintptr_t)_exit;
     exec_prog(prog_addr, pcb->stack + STACK_SIZE);
 
     return 0;
@@ -66,6 +70,8 @@ int fork()
 
     new_pcb = pcb_table[new_pid];
     memcpy(new_pcb->stack - STACK_SIZE, pcb->stack - STACK_SIZE, STACK_SIZE);
+    new_pcb->el = pcb->el;
+    new_pcb->lr = pcb->lr;
     
     // Copy current regs to new_pcb
     asm volatile ("mov %0, fp": "=r"(frame_ptr));
@@ -88,6 +94,11 @@ out:
         return 0;
 }
 
+static bool match_pid(void *ptr, void *data)
+{
+    return (pid_t)((struct wait_q_e *)ptr)->data == *(pid_t*)data;
+}
+
 void exit()
 {
     struct pcb_t *pcb = get_current(), *next;
@@ -97,6 +108,7 @@ void exit()
 
     pcb->state = DEAD;
     list_push(&dead_queue, pcb);
+    list_rm_and_process(&wait_queue[PROC], match_pid, &pcb->pid, wait_to_ready);
 
     if (list_empty(&ready_queue))
         return;
@@ -113,6 +125,12 @@ void exit()
 
 void kill(pid_t pid)
 {
+    if (!pcb_table[pid])
+    {
+        err("No such process\r\n");
+        return;
+    }
+
     switch (pcb_table[pid]->state)
     {
         case RUN:
@@ -124,7 +142,7 @@ void kill(pid_t pid)
             list_push(&dead_queue, pcb_table[pid]);
             break;
         case WAIT:
-            list_delete(&wait_queue, pcb_table[pid]);
+            list_delete(pcb_table[pid]->wait_q, pcb_table[pid]);
             pcb_table[pid]->state = DEAD;
             list_push(&dead_queue, pcb_table[pid]);
             break;

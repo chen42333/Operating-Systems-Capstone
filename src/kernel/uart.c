@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "uart.h"
 #include "printf.h"
+#include "process.h"
 
 struct ring_buf r_buf, w_buf;
 char read_buf[BUFLEN], write_buf[BUFLEN];
@@ -66,6 +67,9 @@ size_t uart_write(const char buf[], size_t size)
 {
     size_t i;
 
+    if (ring_buf_remain_e(&w_buf) < size)
+        wait(WRITE, size);
+
     for (i = 0; i < size; i++)
         uart_write_char(buf[i]);
 
@@ -123,6 +127,9 @@ size_t uart_read(char buf[], size_t size)
     char c;
 
     enable_read_int();
+
+    if (ring_buf_num_e(&r_buf) < size)
+        wait(READ, size);
 
     for (i = 0; i < size; i++)
     {
