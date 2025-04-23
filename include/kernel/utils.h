@@ -5,9 +5,12 @@
 #include <stdbool.h>
 #include "printf.h"
 
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
 #define true 1
 #define false 0
-#define NULL ((void*)0)
 #define INT_MAX 2147483647
 
 typedef uint64_t size_t;
