@@ -22,6 +22,9 @@ inline static bool list_empty(struct list *l)
 
 inline static void* list_top(struct list *l)
 {
+    if (!l->head)
+        return NULL;
+        
     return l->head->ptr;
 }
 
