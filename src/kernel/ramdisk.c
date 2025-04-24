@@ -9,7 +9,6 @@
 void *ramdisk_saddr;
 void *ramdisk_eaddr;
 static int dtb_str_idx = 0;
-void *prog_addr;
 
 void ls()
 {
@@ -145,8 +144,9 @@ bool initramfs_end(void *p, char *name)
     return initramfs_process_node(p, name, path, &ramdisk_eaddr);
 }
 
-int load_prog(char *filename)
+void* load_prog(char *filename)
 {
+    void *prog_addr;
     void *addr = ramdisk_saddr;
     while (true)
     {
@@ -157,7 +157,7 @@ int load_prog(char *filename)
         if (addr >= ramdisk_eaddr)
         {
             err("No TRAILER record\r\n");
-            return -1;
+            return NULL;
         }
 
         if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
@@ -167,7 +167,7 @@ int load_prog(char *filename)
         }
 
         if (!strcmp("TRAILER!!!", record->payload))
-            return -1;
+            return NULL;
 
         if ((!strncmp("./", record->payload, 2) && !strcmp(filename, record->payload + 2)) || (strncmp("./", record->payload, 2) && !strcmp(filename, record->payload)) )
         {
@@ -177,7 +177,7 @@ int load_prog(char *filename)
             for (int i = 0; i < file_size; i++)
                 *((char*)prog_addr + i) = *(record->payload + offset + i);
 
-            return 0;
+            return prog_addr;
         }
 
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);

@@ -45,8 +45,9 @@ pid_t getpid()
 int exec(const char* name, char *const argv[])
 {
     struct pcb_t *pcb = get_current();
+    void *prog_addr;
 
-    if (load_prog((char*)name) < 0)
+    if (!(prog_addr = load_prog((char*)name)))
     {
         printf("File not found\r\n");
         return -1;

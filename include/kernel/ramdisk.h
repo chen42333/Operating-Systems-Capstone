@@ -29,12 +29,10 @@ struct cpio_record
     char payload[];
 };
 
-extern void *prog_addr;
-
 void ls();
 int cat(char *filename);
 bool initramfs_start(void *p, char *name);
 bool initramfs_end(void *p, char *name);
-int load_prog(char *filename);
+void* load_prog(char *filename);
 
 #endif
