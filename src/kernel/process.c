@@ -2,7 +2,7 @@
 #include "mem.h"
 #include "syscall.h"
 
-pid_t last_pid = 0;
+volatile pid_t last_pid = 0;
 struct list ready_queue, dead_queue, wait_queue[_LAST];
 struct pcb_t *pcb_table[MAX_PROC];
 
@@ -28,7 +28,7 @@ void init_pcb()
 
 void free_init_pcb()
 {
-    free(pcb_table[0]);
+    free((void*)pcb_table[0]);
 }
 
 pid_t thread_create(void (*func)(void *args), void *args)
@@ -107,6 +107,8 @@ static void kill_zombies()
 
     while (pcb)
     {
+        deref_code(pcb->code);
+        free(pcb->stack - STACK_SIZE);
         pcb_table[pcb->pid] = NULL;
         free(pcb);
         pcb = list_pop(&dead_queue);

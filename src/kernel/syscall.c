@@ -55,6 +55,8 @@ int exec(const char* name, char *const argv[])
     pcb->el = 0;
     pcb->pstate = 0x0; // EL0 with unmasked DAIF
     pcb->lr = (uintptr_t)_exit;
+    deref_code(pcb->code);
+    pcb->code = init_code(prog_addr);
     exec_prog(prog_addr, pcb->stack + STACK_SIZE);
 
     return 0;
@@ -71,9 +73,10 @@ int fork()
     new_pcb = pcb_table[new_pid];
     memcpy(new_pcb->stack - STACK_SIZE, pcb->stack - STACK_SIZE, STACK_SIZE);
     new_pcb->el = pcb->el;
-    new_pcb->lr = pcb->lr;
+    new_pcb->code = ref_code(pcb->code);
     
     // Copy current regs to new_pcb
+    new_pcb->lr = pcb->lr;
     asm volatile ("mov %0, fp": "=r"(frame_ptr));
     asm volatile ("mov %0, sp": "=r"(stack_ptr));
     frame_ptr = (void*)new_pcb->stack - ((void*)pcb->stack - frame_ptr);
@@ -137,14 +140,14 @@ void kill(pid_t pid)
             exit();
             break;
         case READY:
-            list_delete(&ready_queue, pcb_table[pid]);
+            list_delete(&ready_queue, (void*)pcb_table[pid]);
             pcb_table[pid]->state = DEAD;
-            list_push(&dead_queue, pcb_table[pid]);
+            list_push(&dead_queue, (void*)pcb_table[pid]);
             break;
         case WAIT:
-            list_delete(pcb_table[pid]->wait_q, pcb_table[pid]);
+            list_delete(pcb_table[pid]->wait_q, (void*)pcb_table[pid]);
             pcb_table[pid]->state = DEAD;
-            list_push(&dead_queue, pcb_table[pid]);
+            list_push(&dead_queue, (void*)pcb_table[pid]);
             break;
         case DEAD:
             return;

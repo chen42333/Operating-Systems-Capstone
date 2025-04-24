@@ -29,12 +29,19 @@ struct pcb_t
     stat state;
     struct list *wait_q;
     uint64_t pstate;
+    struct code_ref *code;
 };
 
 struct wait_q_e
 {
     struct pcb_t *pcb;
     size_t data;
+};
+
+struct code_ref
+{
+    void *code;
+    int ref;
 };
 
 extern struct list ready_queue, dead_queue, wait_queue[_LAST];
@@ -51,5 +58,32 @@ void idle();
 void _exit();
 void wait(event e, size_t data);
 void wait_to_ready(void *ptr);
+
+inline static struct code_ref* init_code(void *code)
+{
+    struct code_ref *ret = malloc(sizeof(struct code_ref));
+
+    ret->code = code;
+    ret->ref = 1;
+
+    return ret;
+}
+
+inline static struct code_ref* ref_code(struct code_ref *code)
+{
+    code->ref++;
+    return code;
+}
+
+inline static struct code_ref* deref_code(struct code_ref *code)
+{
+    if (--code->ref == 0)
+    {
+        free(code->code);
+        free(code);
+    }
+
+    return NULL;
+}
 
 #endif
