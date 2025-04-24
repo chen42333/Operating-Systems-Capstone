@@ -20,7 +20,7 @@ void syscall_entry(struct trap_frame *frame)
             frame->RET = (size_t)exec((const char*)frame->arg(0), (char *const*)frame->arg(1));
             break;
         case FORK:
-            frame->RET = (size_t)fork();
+            frame->RET = (size_t)fork(frame);
             break;
         case EXIT:
             exit();
@@ -55,14 +55,16 @@ int exec(const char* name, char *const argv[])
     pcb->el = 0;
     pcb->pstate = 0x0; // EL0 with unmasked DAIF
     pcb->lr = (uintptr_t)_exit;
-    deref_code(pcb->code);
+    if (pcb->code)
+        deref_code(pcb->code);
     pcb->code = init_code(prog_addr);
-    exec_prog(prog_addr, pcb->stack + STACK_SIZE);
+    pcb->sp_el = (uint64_t)pcb->stack[0];
+    exec_prog(prog_addr, pcb->stack[0]);
 
     return 0;
 }
 
-int fork()
+int fork(struct trap_frame *frame)
 {
     struct pcb_t *pcb = get_current(), *new_pcb;
     void *frame_ptr, *stack_ptr;
@@ -71,7 +73,9 @@ int fork()
     new_pid = thread_create(&&out, pcb->args);
 
     new_pcb = pcb_table[new_pid];
-    memcpy(new_pcb->stack - STACK_SIZE, pcb->stack - STACK_SIZE, STACK_SIZE);
+    if (pcb->stack[0])
+        memcpy(new_pcb->stack[0] - STACK_SIZE, pcb->stack[0] - STACK_SIZE, STACK_SIZE);
+    memcpy(new_pcb->stack[1] - STACK_SIZE, pcb->stack[1] - STACK_SIZE, STACK_SIZE);
     new_pcb->el = pcb->el;
     new_pcb->code = ref_code(pcb->code);
     
@@ -79,15 +83,32 @@ int fork()
     new_pcb->lr = pcb->lr;
     asm volatile ("mov %0, fp": "=r"(frame_ptr));
     asm volatile ("mov %0, sp": "=r"(stack_ptr));
-    frame_ptr = (void*)new_pcb->stack - ((void*)pcb->stack - frame_ptr);
-    stack_ptr = (void*)new_pcb->stack - ((void*)pcb->stack - stack_ptr);
+    frame_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - frame_ptr);
+    stack_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - stack_ptr);
     save_regs(new_pcb->reg, frame_ptr, __builtin_return_address(0), stack_ptr);
 
     // Modify all the stored fp on the stack to the new value
-    while (frame_ptr < (void*)new_pcb->stack)
+    while (frame_ptr < (void*)new_pcb->stack[1])
     {
-        *(void**)frame_ptr = (void*)new_pcb->stack - ((void*)pcb->stack - *(void**)frame_ptr);
+        *(void**)frame_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - *(void**)frame_ptr);
         frame_ptr = *(void**)frame_ptr;
+    }
+    if (pcb->el == 0) // The fork is called by a user process, which has EL0 stack and trapframe
+    {
+        // Modify fp at the trap frame of child
+        uint64_t el0_sp;
+        struct trap_frame *new_frame = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - (void*)frame);
+
+        new_frame->x(29) = (size_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)));
+        asm volatile("mrs %0, sp_el0" : "=r"(el0_sp));
+        new_pcb->sp_el = (uint64_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)el0_sp));
+
+        frame_ptr = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)); // The trapframe stores register value in EL0, and PCB stores that in EL1
+        while (frame_ptr < (void*)new_pcb->stack[0])
+        {
+            *(void**)frame_ptr = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - *(void**)frame_ptr);
+            frame_ptr = *(void**)frame_ptr;
+        }
     }
 
 out:

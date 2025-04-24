@@ -17,7 +17,7 @@ void init_pcb()
     pcb->el = 1;
     pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
     pcb->sp_el = (uint64_t)_estack;
-    pcb->stack = (uint8_t*)_estack;
+    pcb->stack[1] = (uint8_t*)_estack;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
     pcb->lr = (uintptr_t)exit;
@@ -52,10 +52,11 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->state = READY;
     pcb->el = 1;
     pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
-    pcb->stack = malloc(STACK_SIZE) + STACK_SIZE;
-    pcb->sp_el = (uint64_t)pcb->stack;
-    pcb->sp = (uint64_t)pcb->stack;
-    pcb->fp = (uint64_t)pcb->stack;
+    pcb->stack[0] = malloc(STACK_SIZE) + STACK_SIZE;
+    pcb->stack[1] = malloc(STACK_SIZE) + STACK_SIZE;
+    pcb->sp_el = (uint64_t)pcb->stack[1];
+    pcb->sp = (uint64_t)pcb->stack[1];
+    pcb->fp = (uint64_t)pcb->stack[1];
     pcb->lr = (uintptr_t)exit;
 
     pcb_table[pid] = pcb;
@@ -108,7 +109,9 @@ static void kill_zombies()
     while (pcb)
     {
         deref_code(pcb->code);
-        free(pcb->stack - STACK_SIZE);
+        if (pcb->stack[0])
+            free(pcb->stack[0] - STACK_SIZE);
+        free(pcb->stack[1] - STACK_SIZE);
         pcb_table[pcb->pid] = NULL;
         free(pcb);
         pcb = list_pop(&dead_queue);

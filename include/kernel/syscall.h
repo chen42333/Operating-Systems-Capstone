@@ -34,7 +34,7 @@ extern void save_regs(void *addr, void *frame_ptr, void *ret_addr, void *stack_p
 void syscall_entry(struct trap_frame *frame);
 pid_t getpid();
 int exec(const char* name, char *const argv[]);
-int fork();
+int fork(struct trap_frame *frame);
 void exit();
 void kill(pid_t pid);
 

@@ -84,7 +84,7 @@ int main(void *_dtb_addr)
             mem_alloc();
         else if (!strcmp("ldProg", arg0))
         {
-            pid_t pid = fork();
+            pid_t pid = fork(NULL);
 
             if (pid == 0)
                 exec(strtok(NULL, ""), NULL);
@@ -261,13 +261,13 @@ void fork_test(){
     printf("\nFork Test, pid %d\n", getpid());
     int cnt = 1;
     int ret = 0;
-    if ((ret = fork()) == 0) { // child
+    if ((ret = fork(NULL)) == 0) { // child
         long long cur_sp;
         asm volatile("mov %0, sp" : "=r"(cur_sp));
         printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
         ++cnt;
 
-        if ((ret = fork()) != 0){
+        if ((ret = fork(NULL)) != 0){
             asm volatile("mov %0, sp" : "=r"(cur_sp));
             printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
         }
