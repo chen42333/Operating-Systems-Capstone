@@ -286,10 +286,3 @@ void fork_test(){
         printf("parent here, pid %d, child %d\n", getpid(), ret);
     }
 }
-
-/*
-ldProg syscall.img
-
-fork後 -> 0x82410ec
-mbox call在0x824112c
-*/
