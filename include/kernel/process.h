@@ -23,7 +23,7 @@ struct pcb_t
     void *args;
     int el;
     uint64_t reg[NR_CALLEE_REGS];
-    uint64_t sp_el;
+    uint64_t sp_el0;
     void *pc;
     uint8_t *stack[2]; // For EL0 and EL1
     stat state;

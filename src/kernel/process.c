@@ -16,7 +16,6 @@ void init_pcb()
     pcb->state = RUN;
     pcb->el = 1;
     pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
-    pcb->sp_el = (uint64_t)_estack;
     pcb->stack[1] = (uint8_t*)_estack;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
@@ -54,7 +53,6 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
     pcb->stack[0] = malloc(STACK_SIZE) + STACK_SIZE;
     pcb->stack[1] = malloc(STACK_SIZE) + STACK_SIZE;
-    pcb->sp_el = (uint64_t)pcb->stack[1];
     pcb->sp = (uint64_t)pcb->stack[1];
     pcb->fp = (uint64_t)pcb->stack[1];
     pcb->lr = (uintptr_t)exit;
@@ -86,9 +84,9 @@ void schedule()
 
     // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
     if (prev->el == 0)
-        asm volatile("mrs %0, sp_el0" : "=r"(prev->sp_el));
+        asm volatile("mrs %0, sp_el0" : "=r"(prev->sp_el0));
     if (next->el == 0)
-        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el));
+        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     prev->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
     switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
 
@@ -149,9 +147,9 @@ void wait(event e, size_t data)
 
     // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
     if (pcb->el == 0)
-        asm volatile("mrs %0, sp_el0" : "=r"(pcb->sp_el));
+        asm volatile("mrs %0, sp_el0" : "=r"(pcb->sp_el0));
     if (next->el == 0)
-        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el));
+        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
     switch_to(pcb->reg, next->reg, next->pc, next->pstate, next->args);
 

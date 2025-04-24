@@ -58,7 +58,7 @@ int exec(const char* name, char *const argv[])
     if (pcb->code)
         deref_code(pcb->code);
     pcb->code = init_code(prog_addr);
-    pcb->sp_el = (uint64_t)pcb->stack[0];
+    pcb->sp_el0 = (uint64_t)pcb->stack[0];
     exec_prog(prog_addr, pcb->stack[0]);
 
     return 0;
@@ -101,7 +101,7 @@ int fork(struct trap_frame *frame)
 
         new_frame->x(29) = (size_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)));
         asm volatile("mrs %0, sp_el0" : "=r"(el0_sp));
-        new_pcb->sp_el = (uint64_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)el0_sp));
+        new_pcb->sp_el0 = (uint64_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)el0_sp));
 
         frame_ptr = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)); // The trapframe stores register value in EL0, and PCB stores that in EL1
         while (frame_ptr < (void*)new_pcb->stack[0])
@@ -143,7 +143,7 @@ void exit()
 
     // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
     if (next->el == 0)
-        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el));
+        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     switch_to(pcb->reg, next->reg, next->pc, next->pstate, next->args);
 }
 
