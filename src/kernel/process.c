@@ -2,7 +2,7 @@
 #include "mem.h"
 #include "syscall.h"
 
-volatile pid_t last_pid = 0;
+pid_t last_pid = 0;
 struct list ready_queue, dead_queue, wait_queue[_LAST];
 struct pcb_t *pcb_table[MAX_PROC];
 

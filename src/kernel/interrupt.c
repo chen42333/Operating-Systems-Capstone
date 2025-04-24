@@ -19,7 +19,7 @@ struct ring_buf timer_queue, task_queue;
 struct timer_queue_element timer_queue_buf[BUFLEN];
 struct task_queue_element task_queue_buf[BUFLEN];
 extern struct ring_buf r_buf, w_buf;
-volatile static enum prio cur_priority = INIT_PRIO;
+static enum prio cur_priority = INIT_PRIO;
 bool need_schedule = false;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
