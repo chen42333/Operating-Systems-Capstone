@@ -2,7 +2,6 @@
 .equ AUX_MU_IIR_REG, 0x3f215048
 
 .section .text
-.global from_el2_to_el1, exception_vector_table, set_exception_vector_table, core_timer_enable
 
 // save general registers to stack
 .macro save_all
@@ -80,6 +79,7 @@
     add sp, sp, 34 * 8
 .endm
 
+.global from_el2_to_el1
 from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
@@ -140,6 +140,7 @@ rx_int_handler:
     eret
 
 .align 11 // vector table should be aligned to 0x800
+.global exception_vector_table
 exception_vector_table:
   b empty // branch to a handler function.
   .align 7 // entry size is 0x80, .align will pad 0
@@ -177,6 +178,7 @@ exception_vector_table:
   b empty
   .align 7
 
+.global set_exception_vector_table
 set_exception_vector_table:
   adr x0, exception_vector_table
   msr vbar_el1, x0
