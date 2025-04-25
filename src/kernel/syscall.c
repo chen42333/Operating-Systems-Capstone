@@ -120,7 +120,7 @@ out:
 
 static bool match_pid(void *ptr, void *data)
 {
-    return (pid_t)((struct wait_q_e *)ptr)->data == *(pid_t*)data;
+    return (pid_t)((struct pcb_t*)ptr)->wait_data == *(pid_t*)data;
 }
 
 void exit()

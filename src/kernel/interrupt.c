@@ -249,7 +249,7 @@ void tx_int_task(void *data)
     set8(AUX_MU_IO_REG, *(char*)data);
 
     if (!list_empty(&wait_queue[WRITE]) && 
-    ring_buf_remain_e(&w_buf) >= ((struct wait_q_e*)list_top(&wait_queue[WRITE]))->data)
+    ring_buf_remain_e(&w_buf) >= ((struct pcb_t*)list_top(&wait_queue[WRITE]))->wait_data)
         wait_to_ready(list_pop(&wait_queue[WRITE]));
     
     if (!ring_buf_empty(&w_buf))
@@ -276,7 +276,7 @@ void rx_int_task(void *data)
     ring_buf_produce(&r_buf, (char*)data, CHAR);
 
     if (!list_empty(&wait_queue[READ]) && 
-    ring_buf_num_e(&r_buf) >= ((struct wait_q_e*)list_top(&wait_queue[READ]))->data)
+    ring_buf_num_e(&r_buf) >= ((struct pcb_t*)list_top(&wait_queue[READ]))->wait_data)
         wait_to_ready(list_pop(&wait_queue[READ]));
 
     enable_read_int();

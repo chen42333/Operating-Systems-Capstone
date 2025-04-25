@@ -35,9 +35,10 @@ void* list_pop(struct list *l)
     return ret;
 }
 
-void list_delete(struct list *l, void *ptr)
+void* list_delete(struct list *l, void *ptr)
 {
     struct node *tmp = l->head;
+    void *ret = NULL;
 
     while (tmp)
     {
@@ -53,23 +54,25 @@ void list_delete(struct list *l, void *ptr)
             else
                 l->tail = tmp->prev;
 
+            ret = tmp->ptr;
             free(tmp);
-            return;
+            return ret;
         }
 
         tmp = tmp->next;
     }
 
     err("Node not found\r\n");
+    return NULL;
 }
 
-void* list_find(struct list *l, bool (*match)(void *ptr))
+void* list_find(struct list *l, bool (*match)(void *ptr, void *data), void *match_data)
 {
     struct node *tmp = l->head;
 
     while (tmp)
     {
-        if (match(tmp->ptr))
+        if (match(tmp->ptr, match_data))
             return tmp->ptr;
 
         tmp = tmp->next;

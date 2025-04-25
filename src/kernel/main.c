@@ -108,7 +108,7 @@ int main(void *_dtb_addr)
         {
             for(int i = 0; i < 5; i++)
                 thread_create(foo, NULL);
-            idle();
+            // idle();
         }
         else if (!strcmp("forkTest", arg0))
             fork_test();

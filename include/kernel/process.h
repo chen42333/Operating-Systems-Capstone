@@ -30,12 +30,7 @@ struct pcb_t
     struct list *wait_q;
     uint64_t pstate;
     struct code_ref *code;
-};
-
-struct wait_q_e
-{
-    struct pcb_t *pcb;
-    size_t data;
+    size_t wait_data;
 };
 
 struct code_ref

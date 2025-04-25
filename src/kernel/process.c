@@ -128,13 +128,11 @@ void idle()
 void wait(event e, size_t data)
 {
     struct pcb_t *pcb = get_current(), *next;
-    struct wait_q_e *w = malloc(sizeof(struct wait_q_e));
 
-    w->pcb = pcb;
-    w->data = data;
+    pcb->wait_data = data;
     pcb->state = WAIT;
     pcb->wait_q = &wait_queue[e];
-    list_push(&wait_queue[e], w);
+    list_push(&wait_queue[e], pcb);
 
     pcb->pc = &&out;
 
@@ -159,10 +157,9 @@ out:
 
 void wait_to_ready(void *ptr)
 {
-    struct wait_q_e *e = (struct wait_q_e*)ptr;
-    struct pcb_t *pcb = e->pcb;
+    struct pcb_t *pcb = (struct pcb_t*)ptr;
     
-    free(e);
+    pcb->wait_data = 0;
     pcb->state = READY;
     pcb->wait_q = NULL;
     list_push(&ready_queue, pcb);
