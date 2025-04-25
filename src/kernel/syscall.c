@@ -81,7 +81,6 @@ int fork(struct trap_frame *frame)
     new_pcb->code = ref_code(pcb->code);
     
     // Copy current regs to new_pcb
-    new_pcb->lr = pcb->lr;
     asm volatile ("mov %0, fp": "=r"(frame_ptr));
     asm volatile ("mov %0, sp": "=r"(stack_ptr));
     frame_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - frame_ptr);
