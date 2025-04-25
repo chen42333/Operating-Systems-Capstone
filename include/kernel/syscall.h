@@ -20,7 +20,9 @@ enum syscall
     FORK = 4,
     EXIT = 5,
     MBOX_CALL = 6,
-    KILL = 7
+    KILL = 7,
+    SIGNAL = 8, 
+    SIGNAL_KILL = 9
 };
 
 struct trap_frame

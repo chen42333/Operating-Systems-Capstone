@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "utils.h"
 #include "list.h"
+#include "signal.h"
 
 #define MAX_PROC 1024
 #define STACK_SIZE 4096
@@ -31,6 +32,8 @@ struct pcb_t
     uint64_t pstate;
     struct code_ref *code;
     size_t wait_data;
+    void (*sig_handler[_NSIG])();
+    struct list signal_queue;
 };
 
 struct code_ref

@@ -5,6 +5,17 @@
 pid_t last_pid = 0;
 struct list ready_queue, dead_queue, wait_queue[_LAST];
 struct pcb_t *pcb_table[MAX_PROC];
+void (*default_sig_handler[_NSIG])() = 
+{
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+    NULL, exit, NULL, NULL, NULL, NULL, NULL, NULL, 
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+};
 
 void init_pcb()
 {
@@ -20,6 +31,8 @@ void init_pcb()
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
     pcb->lr = (uintptr_t)exit;
+    for (int i = 0; i < _NSIG; i++)
+        pcb->sig_handler[i] = SIG_DFL;
 
     pcb_table[0] = pcb;
     set_current(pcb);
@@ -56,6 +69,8 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->sp = (uint64_t)pcb->stack[1];
     pcb->fp = (uint64_t)pcb->stack[1];
     pcb->lr = (uintptr_t)exit;
+    for (int i = 0; i < _NSIG; i++)
+        pcb->sig_handler[i] = SIG_DFL;
 
     pcb_table[pid] = pcb;
     last_pid = pid;

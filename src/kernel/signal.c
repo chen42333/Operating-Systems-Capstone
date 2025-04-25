@@ -1,0 +1,19 @@
+#include "signal.h"
+#include "process.h"
+#include "syscall.h"
+
+void signal(int signo, void (*handler)())
+{
+    struct pcb_t *pcb = get_current();
+
+    pcb->sig_handler[signo] = handler;
+}
+
+void signal_kill(int pid, int signo)
+{
+    struct pcb_t *pcb  = pcb_table[pid];
+    int *signo_ptr = malloc(sizeof(int));
+
+    *signo_ptr = signo;
+    list_push(&pcb->signal_queue, signo_ptr);
+}

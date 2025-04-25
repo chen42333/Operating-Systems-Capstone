@@ -31,6 +31,12 @@ void syscall_entry(struct trap_frame *frame)
         case KILL:
             kill((pid_t)frame->arg(0));
             break;
+        case SIGNAL:
+            signal((int)frame->arg(0), (void (*)())frame->arg(1));
+            break;
+        case SIGNAL_KILL:
+            signal_kill((int)frame->arg(0), (int)frame->arg(1));
+            break;
         default:
             err("Unknown syscall\r\n");
             break;
@@ -79,6 +85,7 @@ int fork(struct trap_frame *frame)
     memcpy(new_pcb->stack[1] - STACK_SIZE, pcb->stack[1] - STACK_SIZE, STACK_SIZE);
     new_pcb->el = pcb->el;
     new_pcb->code = ref_code(pcb->code);
+    memcpy(new_pcb->sig_handler, pcb->sig_handler, sizeof(new_pcb->sig_handler));
     
     // Copy current regs to new_pcb
     asm volatile ("mov %0, fp": "=r"(frame_ptr));
