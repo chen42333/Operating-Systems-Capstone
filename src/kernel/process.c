@@ -80,6 +80,24 @@ pid_t thread_create(void (*func)(void *args), void *args)
     return pid;
 }
 
+void switch_to_next(struct pcb_t *prev)
+{
+    struct pcb_t *next = list_pop(&ready_queue);
+
+    prev->pc = &&out;
+
+    next->state = RUN;
+    set_current(next);
+
+    if (next->el == 0)
+        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
+    
+    switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
+
+out:
+    ; // the following will do the restoration of fp and lr
+}
+
 void schedule()
 {
     struct pcb_t *prev, *next;
@@ -91,22 +109,12 @@ void schedule()
     prev->state = READY;
     list_push(&ready_queue, prev);
 
-    prev->pc = &&out;
-
-    next = list_pop(&ready_queue);
-    next->state = RUN;
-    set_current(next);
-
     // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
     if (prev->el == 0)
         asm volatile("mrs %0, sp_el0" : "=r"(prev->sp_el0));
-    if (next->el == 0)
-        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     prev->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
-    switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
 
-out:
-    ; // the following will do the restoration of fp and lr
+    switch_to_next(prev);
 }
 
 void _exit()
@@ -149,25 +157,15 @@ void wait(event e, size_t data)
     pcb->wait_q = &wait_queue[e];
     list_push(&wait_queue[e], pcb);
 
-    pcb->pc = &&out;
+    // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
+    if (pcb->el == 0)
+        asm volatile("mrs %0, sp_el0" : "=r"(pcb->sp_el0));
+    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
 
     if (list_empty(&ready_queue))
         return;
 
-    next = list_pop(&ready_queue);
-    next->state = RUN;
-    set_current(next);
-
-    // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
-    if (pcb->el == 0)
-        asm volatile("mrs %0, sp_el0" : "=r"(pcb->sp_el0));
-    if (next->el == 0)
-        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
-    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
-    switch_to(pcb->reg, next->reg, next->pc, next->pstate, next->args);
-
-out:
-    ; // the following will do the restoration of fp and lr
+    switch_to_next(pcb);
 }
 
 void wait_to_ready(void *ptr)

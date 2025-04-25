@@ -144,14 +144,7 @@ void exit()
     if (list_empty(&ready_queue))
         return;
 
-    next = list_pop(&ready_queue);
-    next->state = RUN;
-    set_current(next);
-
-    // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
-    if (next->el == 0)
-        asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
-    switch_to(pcb->reg, next->reg, next->pc, next->pstate, next->args);
+    switch_to_next(pcb);
 }
 
 void kill(pid_t pid)

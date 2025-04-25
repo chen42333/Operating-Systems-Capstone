@@ -51,6 +51,7 @@ extern void switch_to(uint64_t *prev_reg, uint64_t *next_reg, void *next_pc, uin
 void init_pcb();
 void free_init_pcb();
 pid_t thread_create(void (*func)(void *args), void *args);
+void switch_to_next(struct pcb_t *prev);
 void schedule();
 void idle();
 void _exit();
