@@ -37,6 +37,9 @@ void syscall_entry(struct trap_frame *frame)
         case SIGNAL_KILL:
             signal_kill((int)frame->arg(0), (int)frame->arg(1));
             break;
+        case SIGRET:
+            sigreturn();
+            break;
         default:
             err("Unknown syscall\r\n");
             break;
@@ -60,7 +63,7 @@ int exec(const char* name, char *const argv[])
     }
     
     pcb->el = 0;
-    pcb->pstate = 0x0; // EL0 with unmasked DAIF
+    pcb->pstate = EL0_W_DAIF;
     pcb->lr = (uintptr_t)_exit;
     if (pcb->code)
         deref_code(pcb->code);
@@ -132,7 +135,7 @@ static bool match_pid(void *ptr, void *data)
 
 void exit()
 {
-    struct pcb_t *pcb = get_current(), *next;
+    struct pcb_t *pcb = get_current();
 
     if (pcb->state == DEAD)
         return;
@@ -149,26 +152,29 @@ void exit()
 
 void kill(pid_t pid)
 {
-    if (!pcb_table[pid])
+    struct pcb_t *pcb = pcb_table[pid];
+    if (!pcb)
     {
         err("No such process\r\n");
         return;
     }
 
-    switch (pcb_table[pid]->state)
+    switch (pcb->state)
     {
         case RUN:
             exit();
             break;
         case READY:
-            list_delete(&ready_queue, (void*)pcb_table[pid]);
-            pcb_table[pid]->state = DEAD;
-            list_push(&dead_queue, (void*)pcb_table[pid]);
+            list_delete(&ready_queue, (void*)pcb);
+            pcb->state = DEAD;
+            list_push(&dead_queue, (void*)pcb);
+            list_rm_and_process(&wait_queue[PROC], match_pid, &pcb->pid, wait_to_ready);
             break;
         case WAIT:
-            list_delete(pcb_table[pid]->wait_q, (void*)pcb_table[pid]);
-            pcb_table[pid]->state = DEAD;
-            list_push(&dead_queue, (void*)pcb_table[pid]);
+            list_delete(pcb->wait_q, (void*)pcb);
+            pcb->state = DEAD;
+            list_push(&dead_queue, (void*)pcb);
+            list_rm_and_process(&wait_queue[PROC], match_pid, &pcb->pid, wait_to_ready);
             break;
         case DEAD:
             return;

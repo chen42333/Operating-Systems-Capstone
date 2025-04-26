@@ -29,5 +29,7 @@
 
 void signal(int signo, void (*handler)());
 void signal_kill(int pid, int signo);
+void _sigreturn();
+void sigreturn();
 
 #endif

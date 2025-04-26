@@ -13,6 +13,9 @@
 #define lr reg[30 - 19]
 #define sp reg[31 - 19]
 
+#define EL0_W_DAIF 0x0 // EL0 with unmasked DAIF
+#define EL1H_W_DAIF 0x5 // EL1h (using SP1) with unmasked DAIF
+
 typedef int pid_t;
 
 typedef enum stat { RUN, READY, WAIT, DEAD } stat;
@@ -48,6 +51,10 @@ extern struct pcb_t *pcb_table[MAX_PROC];
 extern struct pcb_t* get_current();
 extern void set_current(struct pcb_t *pcb);
 extern void switch_to(uint64_t *prev_reg, uint64_t *next_reg, void *next_pc, uint64_t next_pstat, void *next_args);
+extern void save_regs(void *addr, void *frame_ptr, void *ret_addr, void *stack_ptr);
+extern void load_regs(uint64_t *next_reg, void *next_pc, uint64_t next_pstat, void *next_args);
+
+void ps();
 void init_pcb();
 void free_init_pcb();
 pid_t thread_create(void (*func)(void *args), void *args);

@@ -22,7 +22,8 @@ enum syscall
     MBOX_CALL = 6,
     KILL = 7,
     SIGNAL = 8, 
-    SIGNAL_KILL = 9
+    SIGNAL_KILL = 9,
+    SIGRET = 10
 };
 
 struct trap_frame
@@ -31,7 +32,6 @@ struct trap_frame
 };
 
 extern void exec_prog(void *addr, void *stack);
-extern void save_regs(void *addr, void *frame_ptr, void *ret_addr, void *stack_ptr);
 
 void syscall_entry(struct trap_frame *frame);
 pid_t getpid();

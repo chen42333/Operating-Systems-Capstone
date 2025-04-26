@@ -66,7 +66,8 @@ int main(void *_dtb_addr)
                     "malloc <size>\t: allocate <size> bytes data using dynamic allocator\r\n"
                     "free <ptr>\t: free data allocated by dynamic allocator at <ptr>\r\n"
                     "thread\t: test multi-thread\r\n"
-                    "forkTest\t: run fork_test (built-in, at EL1)\r\n");
+                    "forkTest\t: run fork_test (built-in, at EL1)\r\n"
+                    "ps\t: check existing process\r\n");
         else if (!strcmp("hello", arg0))
             printf("Hello World!\r\n");
         else if (!strcmp("mailbox", arg0))
@@ -112,6 +113,8 @@ int main(void *_dtb_addr)
         }
         else if (!strcmp("forkTest", arg0))
             fork_test();
+        else if (!strcmp("ps", arg0))
+            ps();
         else
             printf("Invalid command\r\n");
     }

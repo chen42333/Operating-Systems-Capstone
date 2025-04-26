@@ -32,10 +32,37 @@ save_regs:
     stp x23, x24, [x0, 16 * 2]
     stp x25, x26, [x0, 16 * 3]
     stp x27, x28, [x0, 16 * 4]
+
+    cbnz x1, 1f
+    mov x1, fp
+1:
+    cbnz x2, 2f
+    mov x2, lr
+2:
+    cbnz x3, 3f
+    mov x3, sp
+3:
     stp x1, x2, [x0, 16 * 5]
     str x3, [x0, 16 * 6]
 
     ret
+
+.global load_regs
+load_regs:
+    ldp x19, x20, [x0, 16 * 0]
+    ldp x21, x22, [x0, 16 * 1]
+    ldp x23, x24, [x0, 16 * 2]
+    ldp x25, x26, [x0, 16 * 3]
+    ldp x27, x28, [x0, 16 * 4]
+    ldp fp, lr, [x0, 16 * 5]
+    ldr x9, [x0, 16 * 6]
+    mov sp, x9
+
+    mov x0, x3
+
+    msr elr_el1, x1
+    msr spsr_el1, x2
+    eret
 
 .global get_current
 get_current:

@@ -17,3 +17,16 @@ void signal_kill(int pid, int signo)
     *signo_ptr = signo;
     list_push(&pcb->signal_queue, signo_ptr);
 }
+
+void _sigreturn()
+{
+    register int syscall_id __asm__("x8") = SIGRET;
+    asm volatile ("svc #0":: "r"(syscall_id): "memory");
+}
+
+void sigreturn()
+{
+    struct pcb_t *pcb = get_current();
+
+    load_regs(pcb->reg, pcb->pc, pcb->pstate, pcb->args);
+}

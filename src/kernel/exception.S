@@ -100,7 +100,7 @@ exception_handler:
 syscall_handler:
     save_all
     mov x0, sp
-    msr DAIFClr, 0b10
+    msr DAIFClr, 0xf
     bl syscall_entry
     load_all_wo_x0
     eret

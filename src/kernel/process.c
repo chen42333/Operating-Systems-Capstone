@@ -1,6 +1,7 @@
 #include "process.h"
 #include "mem.h"
 #include "syscall.h"
+#include "signal.h"
 
 pid_t last_pid = 0;
 struct list ready_queue, dead_queue, wait_queue[_LAST];
@@ -17,6 +18,34 @@ void (*default_sig_handler[_NSIG])() =
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
+void ps()
+{
+    for (int i = 0; i < MAX_PROC; i++)
+    {
+        struct pcb_t *pcb = pcb_table[i];
+        if (pcb)
+        {
+            switch (pcb->state)
+            {
+                case RUN:
+                case READY:
+                    printf("%d(R) ", i);
+                    break;
+                case WAIT:
+                    printf("%d(S) ", i);
+                    break;
+                case DEAD:
+                    printf("%d(Z) ", i);
+                    break;
+                default:
+                    printf("%d(?) ", i);
+                    break;
+            }
+        }
+    }
+    printf("\r\n");
+}
+
 void init_pcb()
 {
     struct pcb_t *pcb;
@@ -26,7 +55,7 @@ void init_pcb()
     pcb->pc = idle;
     pcb->state = RUN;
     pcb->el = 1;
-    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    pcb->pstate = EL1H_W_DAIF;
     pcb->stack[1] = (uint8_t*)_estack;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
@@ -63,7 +92,7 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->args = args;
     pcb->state = READY;
     pcb->el = 1;
-    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    pcb->pstate = EL1H_W_DAIF;
     pcb->stack[0] = malloc(STACK_SIZE) + STACK_SIZE;
     pcb->stack[1] = malloc(STACK_SIZE) + STACK_SIZE;
     pcb->sp = (uint64_t)pcb->stack[1];
@@ -92,7 +121,40 @@ void switch_to_next(struct pcb_t *prev)
     if (next->el == 0)
         asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     
-    switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
+    if (list_empty(&next->signal_queue))
+        switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
+    else
+    {
+        int *signo_ptr = list_pop(&next->signal_queue);
+        int signo = *signo_ptr;
+        void (*handler)() = next->sig_handler[signo];
+        void *frame_ptr, *stack_ptr;
+        uint64_t reg[NR_CALLEE_REGS];
+
+        free(signo_ptr);
+        asm volatile ("mov %0, fp": "=r"(frame_ptr));
+        asm volatile ("mov %0, sp": "=r"(stack_ptr));
+        memcpy(reg, next->reg, sizeof(reg));
+
+        if (handler == SIG_DFL)
+        {
+            handler = default_sig_handler[signo];
+
+            save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
+
+            lr = (uint64_t)sigreturn;
+            load_regs(reg, handler, EL1H_W_DAIF, NULL);
+
+        } else if (handler == SIG_IGN)
+            switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
+        else
+        {
+            save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
+
+            lr = (uint64_t)_sigreturn;
+            load_regs(reg, handler, EL0_W_DAIF, NULL);
+        }
+    }
 
 out:
     ; // the following will do the restoration of fp and lr
@@ -100,7 +162,7 @@ out:
 
 void schedule()
 {
-    struct pcb_t *prev, *next;
+    struct pcb_t *prev;
 
     if (list_empty(&ready_queue))
         return;
@@ -112,14 +174,14 @@ void schedule()
     // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
     if (prev->el == 0)
         asm volatile("mrs %0, sp_el0" : "=r"(prev->sp_el0));
-    prev->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    prev->pstate = EL1H_W_DAIF;
 
     switch_to_next(prev);
 }
 
 void _exit()
 {
-    register int syscall_id __asm__("x8") = 5;
+    register int syscall_id __asm__("x8") = EXIT;
     asm volatile ("svc #0":: "r"(syscall_id): "memory");
 }
 
@@ -144,13 +206,13 @@ void idle()
     while (true)
     {
         kill_zombies();
-        // schedule();
+        schedule();
     }
 }
 
 void wait(event e, size_t data)
 {
-    struct pcb_t *pcb = get_current(), *next;
+    struct pcb_t *pcb = get_current();
 
     pcb->wait_data = data;
     pcb->state = WAIT;
@@ -160,7 +222,7 @@ void wait(event e, size_t data)
     // It is at EL1 currently, so it doesn't need to save/restore it additionally if prev->el == 1
     if (pcb->el == 0)
         asm volatile("mrs %0, sp_el0" : "=r"(pcb->sp_el0));
-    pcb->pstate = 0x5; // EL1h (using SP1) with unmasked DAIF
+    pcb->pstate = EL1H_W_DAIF;
 
     if (list_empty(&ready_queue))
         return;

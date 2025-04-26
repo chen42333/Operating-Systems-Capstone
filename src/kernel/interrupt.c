@@ -123,7 +123,7 @@ void timer_int()
 
     process_task(NULL);
 
-    asm volatile ("msr DAIFSet, 0b10"); // Disable interrupt
+    asm volatile ("msr DAIFSet, 0xf"); // Disable interrupt
     if (need_schedule)
     {
         need_schedule = false;
@@ -227,7 +227,7 @@ void process_task(struct task_queue_element *task)
     {
         if (ring_buf_empty(&task_queue) || cur_priority < ((struct task_queue_element*)task_queue.buf)[task_queue.consumer_idx].priority)
         {
-            asm volatile ("msr DAIFClr, 0b10"); // Enable interrupt
+            asm volatile ("msr DAIFClr, 0xf"); // Enable interrupt
             return;
         }    
         
@@ -236,10 +236,10 @@ void process_task(struct task_queue_element *task)
 
     cur_priority = element.priority;
     
-    asm volatile ("msr DAIFClr, 0b10"); // Enable interrupt
+    asm volatile ("msr DAIFClr, 0xf"); // Enable interrupt
     element.handler(element.data);
 
-    asm volatile ("msr DAIFSet, 0b10"); // Disable interrupt
+    asm volatile ("msr DAIFSet, 0xf"); // Disable interrupt
     cur_priority = tmp; // Critical section
     process_task(NULL);
 }
