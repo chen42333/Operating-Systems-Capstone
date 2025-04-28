@@ -129,14 +129,12 @@ void switch_to_next(struct pcb_t *prev)
     if (next->el == 0)
         asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     
-    enable_int();
-
     if (list_empty(&next->signal_queue))
-        switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
-    else
     {
-        disable_int();
-
+        enable_int();
+        switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
+    } else
+    {
         int *signo_ptr = list_pop(&next->signal_queue);
         int signo = *signo_ptr;
         void (*handler)() = next->sig_handler[signo];
@@ -147,24 +145,25 @@ void switch_to_next(struct pcb_t *prev)
         asm volatile ("mov %0, sp": "=r"(stack_ptr));
         memcpy(next->reg_backup, next->reg, sizeof(next->reg));
 
-        enable_int();
-
         if (handler == SIG_DFL)
         {
             handler = default_sig_handler[signo];
-
             save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
-
             next->lr = (uint64_t)sigreturn;
+
+            enable_int();
+
             load_regs(next->reg, handler, EL1H_W_DAIF, NULL);
 
-        } else if (handler == SIG_IGN)
+        } else if (handler == SIG_IGN) {
+            enable_int();
             switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
-        else
-        {
+        } else {
             save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
-
             next->lr = (uint64_t)_sigreturn;
+
+            enable_int();
+            
             load_regs(next->reg, handler, EL0_W_DAIF, NULL);
         }
     }

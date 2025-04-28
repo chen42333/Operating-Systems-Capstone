@@ -107,18 +107,12 @@ int fork(struct trap_frame *frame)
     new_pcb->code = ref_code(pcb->code);
     memcpy(new_pcb->sig_handler, pcb->sig_handler, sizeof(new_pcb->sig_handler));
 
-    enable_int();
-    disable_int();
-
     // Copy current regs to new_pcb
     asm volatile ("mov %0, fp": "=r"(frame_ptr));
     asm volatile ("mov %0, sp": "=r"(stack_ptr));
     frame_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - frame_ptr);
     stack_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - stack_ptr);
     save_regs(new_pcb->reg, frame_ptr, __builtin_return_address(0), stack_ptr);
-
-    enable_int();
-    disable_int();
 
     tmp = frame_ptr;
 
@@ -128,8 +122,6 @@ int fork(struct trap_frame *frame)
         *(void**)tmp = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - *(void**)tmp);
         tmp = *(void**)tmp;
     }
-    enable_int();
-    disable_int();
     if (pcb->el == 0) // The fork is called by a user process, which has EL0 stack and trapframe
     {
         // Modify fp at the trap frame of child
@@ -139,8 +131,8 @@ int fork(struct trap_frame *frame)
         new_frame->x(29) = (size_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)));
         asm volatile("mrs %0, sp_el0" : "=r"(el0_sp));
         new_pcb->sp_el0 = (uint64_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)el0_sp));
-
         tmp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)); // The trapframe stores register value in EL0, and PCB stores that in EL1
+
         while (tmp < (void*)new_pcb->stack[0])
         {
             *(void**)tmp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - *(void**)tmp);
