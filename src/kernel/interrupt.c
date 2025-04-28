@@ -123,7 +123,6 @@ void timer_int()
 
     process_task(NULL);
 
-    asm volatile ("msr DAIFSet, 0xf"); // Disable interrupt
     if (need_schedule)
     {
         need_schedule = false;
@@ -216,7 +215,7 @@ void exception_entry()
 #endif
 }
 
-void process_task(struct task_queue_element *task)
+void process_task(struct task_queue_element *task) // Interrupt is disabled after process_task()
 {
     struct task_queue_element element;
     enum prio tmp = cur_priority;
@@ -226,10 +225,7 @@ void process_task(struct task_queue_element *task)
     else 
     {
         if (ring_buf_empty(&task_queue) || cur_priority < ((struct task_queue_element*)task_queue.buf)[task_queue.consumer_idx].priority)
-        {
-            asm volatile ("msr DAIFClr, 0xf"); // Enable interrupt
             return;
-        }    
         
         ring_buf_consume(&task_queue, &element, TASK);
     }

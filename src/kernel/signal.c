@@ -12,8 +12,15 @@ void signal(int signo, void (*handler)())
 void signal_kill(int pid, int signo)
 {
     struct pcb_t *pcb  = pcb_table[pid];
-    int *signo_ptr = malloc(sizeof(int));
+    int *signo_ptr;
 
+    if (!pcb)
+    {
+        err("No such process\r\n");
+        return;
+    }
+
+    signo_ptr = malloc(sizeof(int));
     *signo_ptr = signo;
     list_push(&pcb->signal_queue, signo_ptr);
 }

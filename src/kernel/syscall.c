@@ -59,6 +59,7 @@ int exec(const char* name, char *const argv[])
     if (!(prog_addr = load_prog((char*)name)))
     {
         printf("File not found\r\n");
+        exit();
         return -1;
     }
     
