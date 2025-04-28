@@ -27,6 +27,7 @@ struct pcb_t
     void *args;
     int el;
     uint64_t reg[NR_CALLEE_REGS];
+    uint64_t reg_backup[NR_CALLEE_REGS]; // store/restore reg to/from reg_backup before/after running signal handler
     uint64_t sp_el0;
     void *pc;
     uint8_t *stack[2]; // For EL0 and EL1

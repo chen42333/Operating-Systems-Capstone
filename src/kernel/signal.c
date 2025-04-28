@@ -28,5 +28,6 @@ void sigreturn()
 {
     struct pcb_t *pcb = get_current();
 
+    memcpy(pcb->reg, pcb->reg_backup, sizeof(pcb->reg));
     load_regs(pcb->reg, pcb->pc, pcb->pstate, pcb->args);
 }

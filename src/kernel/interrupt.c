@@ -6,7 +6,7 @@
 #include "process.h"
 
 // For test exception and interrupt handler
-// #define TEST_EXCEPTION
+#define TEST_EXCEPTION
 // #define TEST_INT
 
 // For test preemption

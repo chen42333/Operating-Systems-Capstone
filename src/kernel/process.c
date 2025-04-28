@@ -129,12 +129,11 @@ void switch_to_next(struct pcb_t *prev)
         int signo = *signo_ptr;
         void (*handler)() = next->sig_handler[signo];
         void *frame_ptr, *stack_ptr;
-        uint64_t reg[NR_CALLEE_REGS];
 
         free(signo_ptr);
         asm volatile ("mov %0, fp": "=r"(frame_ptr));
         asm volatile ("mov %0, sp": "=r"(stack_ptr));
-        memcpy(reg, next->reg, sizeof(reg));
+        memcpy(next->reg_backup, next->reg, sizeof(next->reg));
 
         if (handler == SIG_DFL)
         {
@@ -142,8 +141,8 @@ void switch_to_next(struct pcb_t *prev)
 
             save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
 
-            lr = (uint64_t)sigreturn;
-            load_regs(reg, handler, EL1H_W_DAIF, NULL);
+            next->lr = (uint64_t)sigreturn;
+            load_regs(next->reg, handler, EL1H_W_DAIF, NULL);
 
         } else if (handler == SIG_IGN)
             switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
@@ -151,8 +150,8 @@ void switch_to_next(struct pcb_t *prev)
         {
             save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
 
-            lr = (uint64_t)_sigreturn;
-            load_regs(reg, handler, EL0_W_DAIF, NULL);
+            next->lr = (uint64_t)_sigreturn;
+            load_regs(next->reg, handler, EL0_W_DAIF, NULL);
         }
     }
 

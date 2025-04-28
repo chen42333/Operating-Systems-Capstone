@@ -86,6 +86,9 @@ from_el2_to_el1:
     mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
     msr spsr_el2, x0
     msr elr_el2, lr
+    mrs x0, sctlr_el1
+    orr x0, x0, 0b11000 // SP alignment check enable for EL1 and EL0
+    msr sctlr_el1, x0
     eret // return to EL1
 
 empty:
