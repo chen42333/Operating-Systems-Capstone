@@ -10,10 +10,11 @@
 
 extern struct ring_buf task_queue;
 extern struct task_queue_element task_queue_buf[BUFLEN];
+extern volatile int irq_nested_count;
 
 enum prio {
-    WRITE_PRIO = 0,
-    TIMER_PRIO = 1,
+    TIMER_PRIO = 0,
+    WRITE_PRIO = 1,
     READ_PRIO = 2,
     INIT_PRIO = INT_MAX
 };
@@ -47,6 +48,22 @@ inline static void disable_timer_int()
 inline static void task_queue_init()
 {
     ring_buf_init(&task_queue, task_queue_buf);
+}
+
+inline static void disable_int() 
+{
+    asm volatile("msr daifset, #0xf" ::: "memory");
+    irq_nested_count++;
+
+    asm volatile("dmb ish" ::: "memory"); // Ensure all memory accesses after here see the locked state
+}
+
+inline static void enable_int() 
+{
+    asm volatile("dmb ish" ::: "memory"); // Ensure all memory writes before releasing lock
+
+    if (--irq_nested_count == 0)
+        asm volatile("msr daifclr, #0xf" ::: "memory");
 }
 
 #endif

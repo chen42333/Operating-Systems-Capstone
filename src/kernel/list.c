@@ -3,6 +3,8 @@
 
 void list_push(struct list *l, void *ptr)
 {
+    disable_int();
+
     struct node *tmp = calloc(1, sizeof(struct node));
     tmp->ptr = ptr;
 
@@ -14,10 +16,14 @@ void list_push(struct list *l, void *ptr)
     else
         l->head = tmp;
     l->tail = tmp;
+
+    enable_int();
 }
 
 void* list_pop(struct list *l)
 {
+    disable_int();
+
     struct node *head = l->head;
     void *ret = NULL;
     
@@ -32,11 +38,15 @@ void* list_pop(struct list *l)
         free(head);
     }
 
+    enable_int();
+
     return ret;
 }
 
 void* list_delete(struct list *l, void *ptr)
 {
+    disable_int();
+
     struct node *tmp = l->head;
     void *ret = NULL;
 
@@ -56,33 +66,48 @@ void* list_delete(struct list *l, void *ptr)
 
             ret = tmp->ptr;
             free(tmp);
-            return ret;
+            break;
         }
 
         tmp = tmp->next;
     }
 
-    err("Node not found\r\n");
-    return NULL;
+    enable_int();
+
+    if (!ret)
+    {
+        err("Node not found\r\n");
+    }
+
+    return ret;
 }
 
 void* list_find(struct list *l, bool (*match)(void *ptr, void *data), void *match_data)
 {
+    disable_int();
+
     struct node *tmp = l->head;
+    void *ret = NULL;
 
     while (tmp)
     {
         if (match(tmp->ptr, match_data))
-            return tmp->ptr;
-
+        {
+            ret = tmp->ptr;
+            break;
+        }
         tmp = tmp->next;
     }
 
-    return NULL;
+    enable_int();
+
+    return ret;
 }
 
 void list_rm_and_process(struct list *l, bool (*match)(void *ptr, void *data), void *match_data, void (*op)(void *ptr))
 {
+    disable_int();
+
     struct node *tmp = l->head;
 
     while (tmp)
@@ -107,4 +132,6 @@ void list_rm_and_process(struct list *l, bool (*match)(void *ptr, void *data), v
 
         tmp = next;
     }
+
+    enable_int();
 }

@@ -79,6 +79,20 @@
     add sp, sp, 34 * 8
 .endm
 
+.macro inc_irq_nested_count
+    adr x1, irq_nested_count
+    ldr w2, [x1]
+    add w2, w2, 1
+    str w2, [x1]
+.endm
+
+.macro dec_irq_nested_count
+    adr x1, irq_nested_count
+    ldr w2, [x1]
+    sub w2, w2, 1
+    str w2, [x1]
+.endm
+
 .global from_el2_to_el1
 from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64
@@ -96,20 +110,24 @@ empty:
 
 exception_handler:
     save_all
+    inc_irq_nested_count
     bl exception_entry
+    dec_irq_nested_count
     load_all
     eret
 
 syscall_handler:
     save_all
+    inc_irq_nested_count
     mov x0, sp
-    msr DAIFClr, 0xf
     bl syscall_entry
+    dec_irq_nested_count
     load_all_wo_x0
     eret
 
 irq_handler:
     save_all
+    inc_irq_nested_count
     ldr x0, =CORE0_IRQ_SOURCE
     ldr x1, [x0]
     and x2, x1, 0b10
@@ -124,21 +142,22 @@ irq_handler:
     cmp x2, 0b100
     beq rx_int_handler
 
-    load_all
-    eret
+    b irq_handler_end
 
 core_timer_handler:
     bl timer_int
-    load_all
-    eret
+    b irq_handler_end
 
 tx_int_handler:
     bl tx_int
-    load_all
-    eret
+    b irq_handler_end
 
 rx_int_handler:
     bl rx_int
+    b irq_handler_end
+
+irq_handler_end:
+    dec_irq_nested_count
     load_all
     eret
 

@@ -23,6 +23,7 @@ void ps()
     for (int i = 0; i < MAX_PROC; i++)
     {
         struct pcb_t *pcb = pcb_table[i];
+
         if (pcb)
         {
             switch (pcb->state)
@@ -77,10 +78,13 @@ pid_t thread_create(void (*func)(void *args), void *args)
     struct pcb_t *pcb;
     pid_t pid;
 
+    disable_int();
+
     for (pid = (last_pid + 1) % MAX_PROC; pcb_table[pid] != NULL; pid++)
     {
         if (pid == last_pid)
         {
+            enable_int();
             err("Cannot create more threads\r\n");
             return -1;
         }
@@ -106,12 +110,16 @@ pid_t thread_create(void (*func)(void *args), void *args)
 
     list_push(&ready_queue, pcb);
 
+    enable_int();
+
     return pid;
 }
 
 void switch_to_next(struct pcb_t *prev)
 {
     struct pcb_t *next = list_pop(&ready_queue);
+
+    disable_int();
 
     prev->pc = &&out;
 
@@ -121,10 +129,14 @@ void switch_to_next(struct pcb_t *prev)
     if (next->el == 0)
         asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     
+    enable_int();
+
     if (list_empty(&next->signal_queue))
         switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
     else
     {
+        disable_int();
+
         int *signo_ptr = list_pop(&next->signal_queue);
         int signo = *signo_ptr;
         void (*handler)() = next->sig_handler[signo];
@@ -134,6 +146,8 @@ void switch_to_next(struct pcb_t *prev)
         asm volatile ("mov %0, fp": "=r"(frame_ptr));
         asm volatile ("mov %0, sp": "=r"(stack_ptr));
         memcpy(next->reg_backup, next->reg, sizeof(next->reg));
+
+        enable_int();
 
         if (handler == SIG_DFL)
         {
@@ -166,6 +180,8 @@ void schedule()
     if (list_empty(&ready_queue))
         return;
 
+    disable_int();
+
     prev = get_current();
     prev->state = READY;
     list_push(&ready_queue, prev);
@@ -174,6 +190,8 @@ void schedule()
     if (prev->el == 0)
         asm volatile("mrs %0, sp_el0" : "=r"(prev->sp_el0));
     prev->pstate = EL1H_W_DAIF;
+
+    enable_int();
 
     switch_to_next(prev);
 }
@@ -213,6 +231,8 @@ void wait(event e, size_t data)
 {
     struct pcb_t *pcb = get_current();
 
+    disable_int();
+
     pcb->wait_data = data;
     pcb->state = WAIT;
     pcb->wait_q = &wait_queue[e];
@@ -222,6 +242,8 @@ void wait(event e, size_t data)
     if (pcb->el == 0)
         asm volatile("mrs %0, sp_el0" : "=r"(pcb->sp_el0));
     pcb->pstate = EL1H_W_DAIF;
+
+    enable_int();
 
     if (list_empty(&ready_queue))
         return;
@@ -233,8 +255,12 @@ void wait_to_ready(void *ptr)
 {
     struct pcb_t *pcb = (struct pcb_t*)ptr;
     
+    disable_int();
+
     pcb->wait_data = 0;
     pcb->state = READY;
     pcb->wait_q = NULL;
     list_push(&ready_queue, pcb);
+
+    enable_int();
 }

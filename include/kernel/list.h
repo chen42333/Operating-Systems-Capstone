@@ -1,7 +1,10 @@
 #ifndef __LIST_H
 #define __LIST_H
 
+/* This list is thread-safe */
+
 #include "mem.h"
+#include "interrupt.h"
 
 struct node
 {
@@ -22,10 +25,12 @@ inline static bool list_empty(struct list *l)
 
 inline static void* list_top(struct list *l)
 {
-    if (!l->head)
-        return NULL;
+    void *ret = NULL;
+
+    if (l->head)
+        ret = l->head->ptr;
         
-    return l->head->ptr;
+    return ret;
 }
 
 void list_push(struct list *l, void *ptr);

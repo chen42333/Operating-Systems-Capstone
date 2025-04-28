@@ -5,6 +5,8 @@
 
 void syscall_entry(struct trap_frame *frame)
 {
+    enable_int();
+
     switch ((enum syscall)frame->nr_syscall)
     {
         case GET_PID:
@@ -44,6 +46,8 @@ void syscall_entry(struct trap_frame *frame)
             err("Unknown syscall\r\n");
             break;
     }
+
+    disable_int();
 }
 
 pid_t getpid()
@@ -62,6 +66,8 @@ int exec(const char* name, char *const argv[])
         exit();
         return -1;
     }
+
+    disable_int();
     
     pcb->el = 0;
     pcb->pstate = EL0_W_DAIF;
@@ -70,16 +76,26 @@ int exec(const char* name, char *const argv[])
         deref_code(pcb->code);
     pcb->code = init_code(prog_addr);
     pcb->sp_el0 = (uint64_t)pcb->stack[0];
+
+    enable_int();
+
     exec_prog(prog_addr, pcb->stack[0]);
 
     return 0;
 }
 
+static bool match_pid(void *ptr, void *data)
+{
+    return (pid_t)((struct pcb_t*)ptr)->wait_data == *(pid_t*)data;
+}
+
 int fork(struct trap_frame *frame)
 {
     struct pcb_t *pcb = get_current(), *new_pcb;
-    void *frame_ptr, *stack_ptr;
+    void *frame_ptr, *stack_ptr, *tmp;;
     volatile pid_t new_pid;
+
+    disable_int();
 
     new_pid = thread_create(&&out, pcb->args);
 
@@ -90,7 +106,10 @@ int fork(struct trap_frame *frame)
     new_pcb->el = pcb->el;
     new_pcb->code = ref_code(pcb->code);
     memcpy(new_pcb->sig_handler, pcb->sig_handler, sizeof(new_pcb->sig_handler));
-    
+
+    enable_int();
+    disable_int();
+
     // Copy current regs to new_pcb
     asm volatile ("mov %0, fp": "=r"(frame_ptr));
     asm volatile ("mov %0, sp": "=r"(stack_ptr));
@@ -98,12 +117,19 @@ int fork(struct trap_frame *frame)
     stack_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - stack_ptr);
     save_regs(new_pcb->reg, frame_ptr, __builtin_return_address(0), stack_ptr);
 
+    enable_int();
+    disable_int();
+
+    tmp = frame_ptr;
+
     // Modify all the stored fp on the stack to the new value
-    while (frame_ptr < (void*)new_pcb->stack[1])
+    while (tmp < (void*)new_pcb->stack[1])
     {
-        *(void**)frame_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - *(void**)frame_ptr);
-        frame_ptr = *(void**)frame_ptr;
+        *(void**)tmp = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - *(void**)tmp);
+        tmp = *(void**)tmp;
     }
+    enable_int();
+    disable_int();
     if (pcb->el == 0) // The fork is called by a user process, which has EL0 stack and trapframe
     {
         // Modify fp at the trap frame of child
@@ -114,24 +140,23 @@ int fork(struct trap_frame *frame)
         asm volatile("mrs %0, sp_el0" : "=r"(el0_sp));
         new_pcb->sp_el0 = (uint64_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)el0_sp));
 
-        frame_ptr = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)); // The trapframe stores register value in EL0, and PCB stores that in EL1
-        while (frame_ptr < (void*)new_pcb->stack[0])
+        tmp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)); // The trapframe stores register value in EL0, and PCB stores that in EL1
+        while (tmp < (void*)new_pcb->stack[0])
         {
-            *(void**)frame_ptr = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - *(void**)frame_ptr);
-            frame_ptr = *(void**)frame_ptr;
+            *(void**)tmp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - *(void**)tmp);
+            tmp = *(void**)tmp;
         }
     }
+
+    save_regs(new_pcb->reg, frame_ptr, __builtin_return_address(0), stack_ptr);
+
+    enable_int();
 
 out:
     if (get_current()->pid != new_pid) // parent
         return new_pid;
     else // child
         return 0;
-}
-
-static bool match_pid(void *ptr, void *data)
-{
-    return (pid_t)((struct pcb_t*)ptr)->wait_data == *(pid_t*)data;
 }
 
 void exit()
@@ -141,9 +166,13 @@ void exit()
     if (pcb->state == DEAD)
         return;
 
+    disable_int();
+
     pcb->state = DEAD;
     list_push(&dead_queue, pcb);
     list_rm_and_process(&wait_queue[PROC], match_pid, &pcb->pid, wait_to_ready);
+
+    enable_int();
 
     if (list_empty(&ready_queue))
         return;
@@ -160,9 +189,12 @@ void kill(pid_t pid)
         return;
     }
 
+    disable_int();
+
     switch (pcb->state)
     {
         case RUN:
+            enable_int();
             exit();
             break;
         case READY:
@@ -178,9 +210,12 @@ void kill(pid_t pid)
             list_rm_and_process(&wait_queue[PROC], match_pid, &pcb->pid, wait_to_ready);
             break;
         case DEAD:
+            enable_int();
             return;
         default:
             err("Unknown process state\r\n");
             break;
     }
+
+    enable_int();
 }

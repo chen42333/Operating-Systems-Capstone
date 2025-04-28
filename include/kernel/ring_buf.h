@@ -33,6 +33,9 @@ struct ring_buf
     void *buf;
 };
 
+void ring_buf_produce(struct ring_buf *rb, void *data, enum buf_type type);
+void ring_buf_consume(struct ring_buf *rb, void *ret, enum buf_type type);
+
 inline static void ring_buf_init(struct ring_buf *rb, void *buf_ptr)
 {
     rb->producer_idx = 0; // The next position to put
@@ -43,7 +46,7 @@ inline static void ring_buf_init(struct ring_buf *rb, void *buf_ptr)
 inline static bool ring_buf_full(struct ring_buf *rb)
 {
     // Wasting 1 byte to differentiate empty/full
-    return (rb->producer_idx + 1) % BUFLEN == rb->consumer_idx; 
+    return (rb->producer_idx + 1) % BUFLEN == rb->consumer_idx;
 }
 
 inline static bool ring_buf_empty(struct ring_buf *rb)
@@ -51,58 +54,14 @@ inline static bool ring_buf_empty(struct ring_buf *rb)
     return rb->producer_idx == rb->consumer_idx;
 }
 
-inline static int ring_buf_num_e(struct ring_buf *rb)
+inline static uint32_t ring_buf_num_e(struct ring_buf *rb)
 {
-    return (rb->producer_idx - rb->consumer_idx) % BUFLEN;
+    return (rb->producer_idx - rb->consumer_idx + BUFLEN) % BUFLEN;
 }
 
-inline static int ring_buf_remain_e(struct ring_buf *rb)
+inline static uint32_t ring_buf_remain_e(struct ring_buf *rb)
 {
-    return BUFLEN - 1 - (rb->producer_idx - rb->consumer_idx) % BUFLEN;
-}
-
-inline static void ring_buf_produce(struct ring_buf *rb, void *data, enum buf_type type)
-{    
-    while (ring_buf_full(rb)) ;
-
-    switch (type)
-    {
-        case CHAR:
-            ((char*)rb->buf)[rb->producer_idx++] = *(char*)data;
-            break;
-        case TIMER:
-            ((struct timer_queue_element*)rb->buf)[rb->producer_idx++] = *(struct timer_queue_element*)data;
-            break;
-        case TASK:
-            ((struct task_queue_element*)rb->buf)[rb->producer_idx++] = *(struct task_queue_element*)data;
-            break;
-        default:
-            break;
-    }
-    
-    rb->producer_idx %= BUFLEN;
-}
-
-inline static void ring_buf_consume(struct ring_buf *rb, void *ret, enum buf_type type)
-{
-    while (ring_buf_empty(rb)) ;
-
-    switch (type)
-    {
-        case CHAR:
-            *(char*)ret = ((char*)rb->buf)[rb->consumer_idx++];
-            break;
-        case TIMER:
-            *(struct timer_queue_element*)ret = ((struct timer_queue_element*)rb->buf)[rb->consumer_idx++];
-            break;
-        case TASK:
-            *(struct task_queue_element*)ret = ((struct task_queue_element*)rb->buf)[rb->consumer_idx++];
-            break;
-        default:
-            break;
-    }
-
-    rb->consumer_idx %= BUFLEN;
+    return BUFLEN - 1 - (rb->producer_idx - rb->consumer_idx + BUFLEN) % BUFLEN;
 }
 
 #endif

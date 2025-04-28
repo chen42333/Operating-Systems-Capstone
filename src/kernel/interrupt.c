@@ -15,6 +15,8 @@
 
 #define EL0_FREQ_REG_ACCESS // Give EL0 the permission to access timer frequency register or not
 
+volatile int irq_nested_count = 1; // DAIF is masked initially
+
 struct ring_buf timer_queue, task_queue;
 struct timer_queue_element timer_queue_buf[BUFLEN];
 struct task_queue_element task_queue_buf[BUFLEN];
@@ -126,7 +128,9 @@ void timer_int()
     if (need_schedule)
     {
         need_schedule = false;
+        enable_int(); // Since it may switch to a process with DAIF unmasked, here should enable interrupt temporary
         schedule();
+        disable_int(); // Make sure DAIF is masked after interrupt handler
     }
 }
 
@@ -232,10 +236,10 @@ void process_task(struct task_queue_element *task) // Interrupt is disabled afte
 
     cur_priority = element.priority;
     
-    asm volatile ("msr DAIFClr, 0xf"); // Enable interrupt
+    enable_int(); // Execute interrupt handler with enabled interrupt to allow preemption
     element.handler(element.data);
 
-    asm volatile ("msr DAIFSet, 0xf"); // Disable interrupt
+    disable_int();
     cur_priority = tmp; // Critical section
     process_task(NULL);
 }

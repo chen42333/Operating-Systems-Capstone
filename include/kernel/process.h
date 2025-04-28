@@ -78,17 +78,24 @@ inline static struct code_ref* init_code(void *code)
 
 inline static struct code_ref* ref_code(struct code_ref *code)
 {
+    disable_int();
     code->ref++;
+    enable_int();
+
     return code;
 }
 
 inline static struct code_ref* deref_code(struct code_ref *code)
 {
+    disable_int();
+
     if (--code->ref == 0)
     {
         free(code->code);
         free(code);
     }
+
+    enable_int();
 
     return NULL;
 }

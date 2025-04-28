@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "printf.h"
 #include "process.h"
+#include "interrupt.h"
 
 struct ring_buf r_buf, w_buf;
 char read_buf[BUFLEN], write_buf[BUFLEN];
@@ -22,7 +23,7 @@ void enable_uart_int()
     ring_buf_init(&w_buf, write_buf);
 
     // Enable interrupt in EL1
-    asm volatile("msr daifclr, 0xf");
+    enable_int();
 }
 
 void uart_init()
