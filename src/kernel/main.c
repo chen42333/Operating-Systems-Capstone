@@ -253,7 +253,7 @@ void foo(void *args)
     struct pcb_t *pcb = get_current();
 
     for(int i = 0; i < 10; ++i) {
-        printf("PID: %d %d\n", pcb->pid, i);
+        printf("PID: %d %d\r\n", pcb->pid, i);
         for (int j = 0; j < 1000000; j++)
             asm volatile("nop");
         schedule();
@@ -261,23 +261,23 @@ void foo(void *args)
 }
 
 void fork_test(){
-    printf("\nFork Test, pid %d\n", getpid());
+    printf("\r\nFork Test, pid %d\r\n", getpid());
     int cnt = 1;
     int ret = 0;
     if ((ret = fork(NULL)) == 0) { // child
         long long cur_sp;
         asm volatile("mov %0, sp" : "=r"(cur_sp));
-        printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+        printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\r\n", getpid(), cnt, &cnt, cur_sp);
         ++cnt;
 
         if ((ret = fork(NULL)) != 0){
             asm volatile("mov %0, sp" : "=r"(cur_sp));
-            printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+            printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\r\n", getpid(), cnt, &cnt, cur_sp);
         }
         else{
             while (cnt < 5) {
                 asm volatile("mov %0, sp" : "=r"(cur_sp));
-                printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+                printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\r\n", getpid(), cnt, &cnt, cur_sp);
                 for (int i = 0; i < 1000000; i++)
                     asm volatile("nop");
                 ++cnt;
@@ -286,6 +286,6 @@ void fork_test(){
         exit();
     }
     else {
-        printf("parent here, pid %d, child %d\n", getpid(), ret);
+        printf("parent here, pid %d, child %d\r\n", getpid(), ret);
     }
 }
