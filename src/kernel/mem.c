@@ -572,7 +572,7 @@ void reserve_mem_regions()
 {
     memory_reserve(SPIN_TABLE_START, SPIN_TABLE_END); // Spin tables for multicore boot
     memory_reserve(_stext, _estack); // Kernel image
-    memory_reserve(heap_ptr, heap_ptr + HEAP_SIZE); // Startup allocator
+    memory_reserve(heap_start, heap_start + HEAP_SIZE); // Startup allocator
     memory_reserve(ramdisk_saddr, ramdisk_eaddr); // Initramfs
     memory_reserve(dtb_addr, dtb_addr + dtb_len); // Device tree
     // Unusable memory region
