@@ -1,7 +1,7 @@
 CC = clang
 CFLAGS = -mcpu=cortex-a53 --target=aarch64-rpi3-elf \
 	-g -Wall -MMD -MP -nostdlib -ffreestanding \
-	-mno-unaligned-access -mgeneral-regs-only
+	-mno-unaligned-access -mgeneral-regs-only -mstack-alignment=16
 LD = ld.lld
 LDFLAGS = -m aarch64elf
 OBJCPY = llvm-objcopy
