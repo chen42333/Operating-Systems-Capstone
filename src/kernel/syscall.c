@@ -112,7 +112,6 @@ int fork(struct trap_frame *frame)
     asm volatile ("mov %0, sp": "=r"(stack_ptr));
     frame_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - frame_ptr);
     stack_ptr = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - stack_ptr);
-    save_regs(new_pcb->reg, frame_ptr, __builtin_return_address(0), stack_ptr);
 
     tmp = frame_ptr;
 
