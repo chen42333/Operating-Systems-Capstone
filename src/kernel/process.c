@@ -144,6 +144,7 @@ void switch_to_next(struct pcb_t *prev)
         asm volatile ("mov %0, fp": "=r"(frame_ptr));
         asm volatile ("mov %0, sp": "=r"(stack_ptr));
         memcpy(next->reg_backup, next->reg, sizeof(next->reg));
+        next->sp_el0_backup = next->sp_el0;
 
         if (handler == SIG_DFL)
         {

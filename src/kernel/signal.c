@@ -36,5 +36,8 @@ void sigreturn()
     struct pcb_t *pcb = get_current();
 
     memcpy(pcb->reg, pcb->reg_backup, sizeof(pcb->reg));
+    pcb->sp_el0 = pcb->sp_el0_backup;
+    asm volatile ("msr sp_el0, %0" :: "r"(pcb->sp_el0));
+    
     load_regs(pcb->reg, pcb->pc, pcb->pstate, pcb->args);
 }
