@@ -117,8 +117,13 @@ int fork(struct trap_frame *frame)
 
     // Modify all the stored fp on the stack to the new value
     while (tmp < (void*)new_pcb->stack[1])
-    {
-        *(void**)tmp = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - *(void**)tmp);
+    {   
+        void *update_fp = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - *(void**)tmp);
+
+        if (update_fp <= tmp || update_fp > (void*)new_pcb->stack[1]) // Reach the 1st frame
+            break;
+
+        *(void**)tmp = update_fp;
         tmp = *(void**)tmp;
     }
     if (pcb->el == 0) // The fork is called by a user process, which has EL0 stack and trapframe
@@ -134,7 +139,12 @@ int fork(struct trap_frame *frame)
 
         while (tmp < (void*)new_pcb->stack[0])
         {
-            *(void**)tmp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - *(void**)tmp);
+            void *update_fp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - *(void**)tmp);
+
+            if (update_fp <= tmp || update_fp > (void*)new_pcb->stack[0]) // Reach the 1st frame
+                break;
+
+            *(void**)tmp = update_fp;
             tmp = *(void**)tmp;
         }
     }
