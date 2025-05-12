@@ -13,8 +13,8 @@ extern struct task_queue_element task_queue_buf[BUFLEN];
 extern volatile int irq_nested_count;
 
 enum prio {
-    TIMER_PRIO = 0,
-    WRITE_PRIO = 1,
+    WRITE_PRIO = 0,
+    TIMER_PRIO = 1,
     READ_PRIO = 2,
     INIT_PRIO = INT_MAX
 };
