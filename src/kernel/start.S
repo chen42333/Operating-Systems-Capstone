@@ -11,6 +11,10 @@ var: .skip 8
 _start:
   mov x28, x0 // .dtb address
   bl from_el2_to_el1
+  bl vmem_init
+
+.global boot_rest
+boot_rest:
   bl set_exception_vector_table
   mrs x0, MPIDR_EL1
   and x0, x0, #0xff

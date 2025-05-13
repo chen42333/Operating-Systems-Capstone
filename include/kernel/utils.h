@@ -15,6 +15,7 @@
 
 typedef uint64_t size_t;
 
+extern char v_kernel_space[];
 extern char _stext[];
 extern char _etext[];
 extern char _srodata[];

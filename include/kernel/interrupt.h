@@ -5,7 +5,7 @@
 #include "ring_buf.h"
 #include "utils.h"
 
-#define CORE0_TIMER_IRQ_CTRL (void*)0x40000040
+#define CORE0_TIMER_IRQ_CTRL (void*)(0x40000040 + v_kernel_space)
 #define TIMER_INT 10 // ms
 
 extern struct ring_buf task_queue;

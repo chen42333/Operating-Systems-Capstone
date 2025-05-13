@@ -121,7 +121,7 @@ static bool initramfs_process_node(void *p, char *name, char *path, void **addr_
         {
             uint32_t value = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop)));
 
-            *addr_ptr = (void*)(uintptr_t)value;
+            *addr_ptr = p2v_trans_kernel((void*)(uintptr_t)value);
             dtb_str_idx = 0;
             return true;
         }

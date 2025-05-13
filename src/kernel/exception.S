@@ -1,5 +1,5 @@
-.equ CORE0_IRQ_SOURCE, 0x40000060
-.equ AUX_MU_IIR_REG, 0x3f215048
+.equ CORE0_IRQ_SOURCE, 0x40000060 + v_kernel_space
+.equ AUX_MU_IIR_REG, 0x3f215048 + v_kernel_space
 
 .section .text
 

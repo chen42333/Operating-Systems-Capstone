@@ -10,6 +10,7 @@
 #include "process.h"
 #include "printf.h"
 #include "syscall.h"
+#include "vmem.h"
 
 /* Test functions */
 void mem_alloc();
@@ -33,7 +34,7 @@ int main(void *_dtb_addr)
 
     core_timer_enable();
 
-    dtb_addr = _dtb_addr;
+    dtb_addr = p2v_trans_kernel(_dtb_addr);
     dtb_get_len();
     fdt_traverse(initramfs_start);
     fdt_traverse(initramfs_end);
@@ -42,6 +43,8 @@ int main(void *_dtb_addr)
     buddy_init();
     dynamic_allocator_init();
     reserve_mem_regions();
+
+    finer_granu_paging();
 
     init_pcb();
     thread_create(idle, NULL);
@@ -197,7 +200,7 @@ void page_free()
     else    
         ptr = (void*)(uintptr_t)hstr2u32(str, strlen(str));
     
-    buddy_free(ptr);
+    buddy_free(v2p_trans(ptr));
 }
 
 void _malloc()
@@ -245,7 +248,7 @@ void _free()
     else    
         ptr = (void*)(uintptr_t)hstr2u32(str, strlen(str));
     
-    free(ptr);
+    free(v2p_trans(ptr));
 }
 
 void foo(void *args)

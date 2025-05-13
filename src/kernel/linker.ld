@@ -1,7 +1,10 @@
 ENTRY(_start)
+
+v_kernel_space = 0xffff000000000000;
+
 MEMORY
 {
-  MEM(rwx) : ORIGIN = 0x80000, LENGTH = 512K
+  KERNEL(rwx) : ORIGIN = v_kernel_space + 0x80000, LENGTH = 512K
 }
 SECTIONS
 {
@@ -10,23 +13,23 @@ SECTIONS
     KEEP(*(.text._start))
     *(.text)
     _etext = .;
-  } > MEM
+  } > KERNEL
   .rodata ALIGN(8): { 
     _srodata = .;
     *(.rodata)
     _erodata = .;
-  } > MEM
+  } > KERNEL
   .data ALIGN(8): { 
     _sdata = .;
     *(.data) 
     _edata = .;
-  } > MEM
+  } > KERNEL
   .bss ALIGN(8): { 
     _sbss = .;
     *(.bss) 
     _ebss = .;
-  } > MEM
+  } > KERNEL
 
-  _estack = 0x100000;
-  _sbrk = 0x10000000;
+  _estack = v_kernel_space + 0x100000;
+  _sbrk = v_kernel_space + 0x10000000;
 }

@@ -3,8 +3,12 @@
 #include "printf.h"
 #include "device_tree.h"
 #include "string.h"
+#include "vmem.h"
 
 // #define TEST_MEM
+
+// simple_malloc(): receive, return, compute in virtual memory addr
+// The others: receive, return virtual memory addr, compute in physical memory addr
 
 static int dtb_str_idx = 0;
 
@@ -179,7 +183,7 @@ void buddy_init()
     buddy_insert_free_block(0, buddy_data.num_pages_exp);
 }
 
-void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
+static void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
 {
     if (block_size_exp == 0 || (1 << (block_size_exp - 1)) < required_size)
     {
@@ -200,7 +204,7 @@ void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
     buddy_cut_block(idx, block_size_exp - 1, required_size);
 }
 
-void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE*/)
+void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */)
 {
     int list_idx = 0, idx;
 
@@ -225,10 +229,10 @@ void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE*/)
     buddy_delete_free_block(idx, list_idx);
     buddy_cut_block(idx, list_idx, size);
 
-    return idx * PAGE_SIZE + buddy_data.base;
+    return p2v_trans_kernel(idx * PAGE_SIZE + buddy_data.base); // For kernel space
 }
 
-void buddy_merge_block(int idx, int block_size_exp)
+static void buddy_merge_block(int idx, int block_size_exp)
 {
     int buddy_idx, big_idx, small_idx;
 
@@ -261,7 +265,7 @@ void buddy_merge_block(int idx, int block_size_exp)
 void buddy_free(void *ptr)
 {
     int idx, list_idx;
-
+    
     if (ptr < buddy_data.base || ptr >= buddy_data.end || (uintptr_t)ptr & (PAGE_SIZE - 1))
     {
         printf("Invalid pointer\r\n");
@@ -330,7 +334,7 @@ void memory_reserve(void *start, void *end)
     size_t size = end - start; // The unit is "byte"
 
 #ifdef TEST_MEM
-    log("Reserve 0x%x-0x%x\r\n", start, end);
+    log("Reserve 0x%lx-0x%lx\r\n", start, end);
 #endif
 
     // Mark the region as allocated
@@ -481,13 +485,14 @@ void* malloc(size_t size)
 
     // There's no free chunk in the memory pool, allocate a new pageframe
     addr = buddy_malloc(1);
-    node_ptr = &dynamic_node_arr[(addr - buddy_data.base) / PAGE_SIZE];
+    node_ptr = &dynamic_node_arr[(v2p_trans(addr) - buddy_data.base) / PAGE_SIZE];
 
     if (prev == NULL) // The first pageframe in the memory pool
         mem_pool[size_exp - MIN_POOL_SIZE_EXP] = node_ptr;
     else
         prev->next = node_ptr;
 
+    node_ptr->addr = addr; // Virtual address
     node_ptr->chunk_size = 1 << size_exp;
     node_ptr->sum += 1;
     node_ptr->bitmap[0] |= 0b1;
@@ -506,11 +511,15 @@ void* calloc(size_t nitems, size_t size)
     return memset(malloc(sz), 0, sz);
 }
 
-void free(void *ptr)
+void free(void *vptr)
 {
-    int page_idx = (ptr - buddy_data.base) / PAGE_SIZE;
+    int page_idx;
     int chunk_idx;
-    struct dynamic_node *node_ptr = &dynamic_node_arr[page_idx];
+    struct dynamic_node *node_ptr;
+
+    void *ptr = v2p_trans(vptr);
+    page_idx = (ptr - buddy_data.base) / PAGE_SIZE;
+    node_ptr = &dynamic_node_arr[page_idx];
 
     if (ptr < buddy_data.base || ptr >= buddy_data.end)
     {
@@ -524,7 +533,7 @@ void free(void *ptr)
         return;
     }
 
-    chunk_idx = (ptr - node_ptr->addr) / node_ptr->chunk_size;
+    chunk_idx = (vptr - node_ptr->addr) / node_ptr->chunk_size;
 
     if (!(node_ptr->bitmap[chunk_idx / 64] & (1 << (chunk_idx % 64))))
     {
@@ -536,7 +545,7 @@ void free(void *ptr)
     node_ptr->bitmap[chunk_idx / 64] &= ~(1 << (chunk_idx % 64));
 
 #ifdef TEST_MEM
-    log("free %d bytes from 0x%x\r\n", node_ptr->chunk_size, ptr);
+    log("free %d bytes from 0x%x\r\n", node_ptr->chunk_size, vptr);
 #endif
 
     if (node_ptr->sum == 0) // The pageframe can be freed
@@ -564,22 +573,24 @@ void free(void *ptr)
         for (int i = 0; i < BITMAP_ARR; i++)
             node_ptr->bitmap[i] = 0;
 
-        buddy_free(node_ptr->addr);
+        buddy_free(v2p_trans(node_ptr->addr));
+        node_ptr->addr = buddy_data.base + page_idx * PAGE_SIZE; // Reset to physical address
     }
 }
 
 void reserve_mem_regions()
 {
-    memory_reserve(SPIN_TABLE_START, SPIN_TABLE_END); // Spin tables for multicore boot
+    memory_reserve(p2v_trans_kernel((void*)SPIN_TABLE_START), p2v_trans_kernel((void*)SPIN_TABLE_END)); // Spin tables for multicore boot
     memory_reserve(_stext, _estack); // Kernel image
+    memory_reserve(p2v_trans_kernel((void*)PGD_ADDR), p2v_trans_kernel((void*)PUD_ADDR + PAGE_SIZE)); // Identity paging
     memory_reserve(heap_start, heap_start + HEAP_SIZE); // Startup allocator
     memory_reserve(ramdisk_saddr, ramdisk_eaddr); // Initramfs
     memory_reserve(dtb_addr, dtb_addr + dtb_len); // Device tree
     // Unusable memory region
     if (buddy_data.usable_memory[0] != buddy_data.base)
-        memory_reserve(buddy_data.base, buddy_data.usable_memory[0]);
+        memory_reserve(p2v_trans_kernel(buddy_data.base), p2v_trans_kernel(buddy_data.usable_memory[0]));
     if (buddy_data.usable_memory[1] != buddy_data.end)
-        memory_reserve(buddy_data.usable_memory[1], buddy_data.end);
+        memory_reserve(p2v_trans_kernel(buddy_data.usable_memory[1]), p2v_trans_kernel(buddy_data.end));
 }
 
 bool mem_region(void *p, char *name)

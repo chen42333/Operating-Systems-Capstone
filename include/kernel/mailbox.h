@@ -1,7 +1,7 @@
 #ifndef __MAILBOX_H
 #define __MAILBOX_H
 
-#define MMIO_BASE (void*)0x3f000000
+#define MMIO_BASE (void*)(0x3f000000 + v_kernel_space)
 #define MAILBOX_BASE (void*)(MMIO_BASE + 0xb880)
 
 #define MAILBOX_READ MAILBOX_BASE
