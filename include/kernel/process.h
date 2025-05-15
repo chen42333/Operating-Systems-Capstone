@@ -26,9 +26,9 @@ struct pcb_t
     pid_t pid;
     void *args;
     int el;
-    uint64_t reg[NR_CALLEE_REGS];
+    uint64_t reg[NR_CALLEE_REGS]; // The sp is for EL1
     uint64_t reg_backup[NR_CALLEE_REGS]; // store/restore reg to/from reg_backup before/after running signal handler
-    uint64_t sp_el0;
+    uint64_t sp_el0; // The sp for EL0 if (el == 0)
     uint64_t sp_el0_backup;
     void *pc;
     uint8_t *stack[2]; // For EL0 and EL1

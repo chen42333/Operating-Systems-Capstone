@@ -19,7 +19,7 @@
 #define TAG_REQUEST_CODE 0x00000000
 #define END_TAG 0x00000000
 
-int mbox_call(unsigned char channel, uint32_t *mailbox);
+int mbox_call(unsigned char channel, uint32_t *mailbox); // Virtual
 void mailbox_info();
 
 #endif

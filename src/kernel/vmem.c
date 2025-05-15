@@ -5,7 +5,7 @@ void finer_granu_paging()
 {
     void *pud_addr = p2v_trans_kernel((void*)PUD_ADDR); // Virtual addr
     void *pmd_addr = malloc(PAGE_SIZE); // Virtual addr
-    size_t pmd_granu = 0x200000;
+    size_t pmd_granu = 0x200000; // 2MB
     size_t num_entries = 1ULL << 9;
 
     for (int i = 0; i < num_entries; i++)
@@ -21,8 +21,8 @@ void finer_granu_paging()
 void *v2p_trans(void *virtual_addr)
 {
     size_t *entry_ptr, entry, table_addr, idx;
-    size_t idx_mask = 0xff8000000000, offset_mask = 0x7fffffffff;
-    size_t table_addr_mask = 0xfffffffff000;
+    size_t idx_mask = 0xff8000000000, offset_mask = 0x7fffffffff; // The index is at bit 47~39 and shifts left 9 bits each time, and the reset is offset
+    size_t table_addr_mask = 0xfffffffff000; // Bit 47~12
 
     if (((size_t)virtual_addr >> 48) == 0xffff) // Kernel space
         asm volatile("mrs %0, ttbr1_el1" : "=r"(entry));
