@@ -2,17 +2,48 @@
 #include "uart.h"
 #include "mailbox.h"
 #include "printf.h"
+#include "vmem.h"
 
 int mbox_call(unsigned char channel, uint32_t *mailbox)
 {
-    uint32_t data = ((unsigned long)mailbox & ~0xf) | channel;
+    uint32_t *p_mbox = v2p_trans((void*)mailbox);
+    uint32_t *v_mbox = p2v_trans_kernel(p_mbox);
+    uint32_t data = ((unsigned long)p_mbox & ~0xf) | channel;
 
     while (get32(MAILBOX_STATUS) & MAILBOX_FULL) ;
     set32(MAILBOX_WRITE, data);
     while (get32(MAILBOX_STATUS) & MAILBOX_EMPTY) ;
     while (get32(MAILBOX_READ) != data) ;
 
-    return mailbox[1] == REQUEST_SUCCEED;
+    // Check whether it contains frame buffer allocation request, to translate the buffer addr for user process
+    if (v_mbox[1] == REQUEST_SUCCEED)
+    {
+        int idx = 2;
+        
+        while (v_mbox[idx] != END_TAG)
+        {
+            if (v_mbox[idx++] == ALLOC_FRAMEBUF && (v_mbox[idx + 1] & (1UL << 31)))
+            {    
+                size_t s_page_idx, e_page_idx, num_pages;
+                void *ttbr;
+
+                asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr));
+                s_page_idx = (size_t)USR_FRAMEBUF_START >> 12;
+                num_pages = (v_mbox[idx + 3] - 1) / PAGE_SIZE + 1;
+                e_page_idx = s_page_idx + num_pages;
+                // Map the address of frame buffer for user process
+                // The real address of frame buffer is the return value & 0x3fffffff
+                fill_page_table(p2v_trans_kernel(ttbr), s_page_idx, e_page_idx, v_mbox[idx + 2] & 0x3fffffff);
+                v_mbox[idx + 2] = (uint32_t)(uintptr_t)USR_FRAMEBUF_START;
+            }
+
+            idx += v_mbox[idx] / sizeof(uint32_t) + 2;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 static void mailbox_request(int n_buf, uint32_t tag, unsigned char channel, uint32_t *data)

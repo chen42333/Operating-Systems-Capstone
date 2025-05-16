@@ -144,7 +144,7 @@ bool initramfs_end(void *p, char *name)
     return initramfs_process_node(p, name, path, &ramdisk_eaddr);
 }
 
-void* load_prog(char *filename)
+void* load_prog(char *filename, size_t *prog_size)
 {
     void *prog_addr;
     void *addr = ramdisk_saddr;
@@ -173,6 +173,7 @@ void* load_prog(char *filename)
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
             prog_addr = buddy_malloc(file_size / PAGE_SIZE + (file_size % PAGE_SIZE > 0));
+            *prog_size = file_size;
 
             for (int i = 0; i < file_size; i++)
                 *((char*)prog_addr + i) = *(record->payload + offset + i);

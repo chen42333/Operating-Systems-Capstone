@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "mailbox.h"
 #include "ramdisk.h"
+#include "vmem.h"
 
 void syscall_entry(struct trap_frame *frame)
 {
@@ -59,8 +60,9 @@ int exec(const char* name, char *const argv[])
 {
     struct pcb_t *pcb = get_current();
     void *prog_addr;
+    size_t prog_size;
 
-    if (!(prog_addr = load_prog((char*)name)))
+    if (!(prog_addr = load_prog((char*)name, &prog_size)))
     {
         printf("File not found\r\n");
         exit();
@@ -74,12 +76,14 @@ int exec(const char* name, char *const argv[])
     pcb->lr = (uintptr_t)_exit;
     if (pcb->code)
         deref_code(pcb->code);
-    pcb->code = init_code(prog_addr);
-    pcb->sp_el0 = (uint64_t)pcb->stack[0];
+    pcb->code = init_code(prog_addr, prog_size);
+    pcb->sp_el0 = (uint64_t)USR_STACK_END;
+
+    map_code_and_stack(pcb);
 
     enable_int();
 
-    exec_prog(prog_addr, pcb->stack[0]);
+    exec_prog(USR_CODE_START, USR_STACK_END, pcb->ttbr);
 
     return 0;
 }
@@ -100,11 +104,16 @@ int fork(struct trap_frame *frame)
     new_pid = thread_create(&&out, pcb->args);
 
     new_pcb = pcb_table[new_pid];
-    if (pcb->stack[0])
-        memcpy(new_pcb->stack[0] - STACK_SIZE, pcb->stack[0] - STACK_SIZE, STACK_SIZE);
-    memcpy(new_pcb->stack[1] - STACK_SIZE, pcb->stack[1] - STACK_SIZE, STACK_SIZE);
-    new_pcb->el = pcb->el;
     new_pcb->code = ref_code(pcb->code);
+    new_pcb->el = pcb->el;
+    if (pcb->stack[0])
+    {
+        memcpy(new_pcb->stack[0] - STACK_SIZE, pcb->stack[0] - STACK_SIZE, STACK_SIZE);
+        asm volatile("mrs %0, sp_el0" : "=r"(new_pcb->sp_el0));
+        map_code_and_stack(new_pcb);
+    }
+    memcpy(new_pcb->stack[1] - STACK_SIZE, pcb->stack[1] - STACK_SIZE, STACK_SIZE);
+    
     memcpy(new_pcb->sig_handler, pcb->sig_handler, sizeof(new_pcb->sig_handler));
 
     // Copy current regs to new_pcb
@@ -125,28 +134,6 @@ int fork(struct trap_frame *frame)
 
         *(void**)tmp = update_fp;
         tmp = *(void**)tmp;
-    }
-    if (pcb->el == 0) // The fork is called by a user process, which has EL0 stack and trapframe
-    {
-        // Modify fp at the trap frame of child
-        uint64_t el0_sp;
-        struct trap_frame *new_frame = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - (void*)frame);
-
-        new_frame->x(29) = (size_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)));
-        asm volatile("mrs %0, sp_el0" : "=r"(el0_sp));
-        new_pcb->sp_el0 = (uint64_t)((void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)el0_sp));
-        tmp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - (void*)frame->x(29)); // The trapframe stores register value in EL0, and PCB stores that in EL1
-
-        while (tmp < (void*)new_pcb->stack[0])
-        {
-            void *update_fp = (void*)new_pcb->stack[0] - ((void*)pcb->stack[0] - *(void**)tmp);
-
-            if (update_fp <= tmp || update_fp > (void*)new_pcb->stack[0]) // Reach the 1st frame
-                break;
-
-            *(void**)tmp = update_fp;
-            tmp = *(void**)tmp;
-        }
     }
 
     save_regs(new_pcb->reg, frame_ptr, __builtin_return_address(0), stack_ptr);

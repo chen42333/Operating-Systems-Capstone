@@ -2,6 +2,7 @@
 #include "mem.h"
 #include "syscall.h"
 #include "signal.h"
+#include "vmem.h"
 
 pid_t last_pid = 0;
 struct list ready_queue, dead_queue, wait_queue[_LAST];
@@ -57,6 +58,7 @@ void init_pcb()
     pcb->state = RUN;
     pcb->el = 1;
     pcb->pstate = EL1H_W_DAIF;
+    asm volatile("mrs %0, ttbr1_el1" : "=r"(pcb->ttbr));
     pcb->stack[1] = (uint8_t*)_estack;
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
@@ -97,6 +99,7 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->state = READY;
     pcb->el = 1;
     pcb->pstate = EL1H_W_DAIF;
+    asm volatile("mrs %0, ttbr1_el1" : "=r"(pcb->ttbr));
     pcb->stack[0] = malloc(STACK_SIZE) + STACK_SIZE;
     pcb->stack[1] = malloc(STACK_SIZE) + STACK_SIZE;
     pcb->sp = (uint64_t)pcb->stack[1];
@@ -132,7 +135,7 @@ void switch_to_next(struct pcb_t *prev)
     if (list_empty(&next->signal_queue))
     {
         enable_int();
-        switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
+        switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args, next->ttbr);
     } else
     {
         int *signo_ptr = list_pop(&next->signal_queue);
@@ -154,18 +157,18 @@ void switch_to_next(struct pcb_t *prev)
 
             enable_int();
 
-            load_regs(next->reg, handler, EL1H_W_DAIF, NULL);
+            load_regs(next->reg, handler, EL1H_W_DAIF, NULL, next->ttbr);
 
         } else if (handler == SIG_IGN) {
             enable_int();
-            switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args);
+            switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args, next->ttbr);
         } else {
             save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
             next->lr = (uint64_t)_sigreturn;
 
             enable_int();
             
-            load_regs(next->reg, handler, EL0_W_DAIF, NULL);
+            load_regs(next->reg, handler, EL0_W_DAIF, NULL, next->ttbr);
         }
     }
 
@@ -209,8 +212,11 @@ static void kill_zombies()
     while (pcb)
     {
         deref_code(pcb->code);
-        if (pcb->stack[0])
+        if (pcb->el == 0)
+        {
             free(pcb->stack[0] - STACK_SIZE);
+            free_page_table(pcb->ttbr, PGD);
+        }
         free(pcb->stack[1] - STACK_SIZE);
         pcb_table[pcb->pid] = NULL;
         free(pcb);

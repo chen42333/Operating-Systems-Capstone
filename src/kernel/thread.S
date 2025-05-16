@@ -21,6 +21,12 @@ switch_to:
 
     mov x0, x4
 
+    dsb ish // ensure write has completed
+    msr ttbr0_el1, x5 // switch translation based address.
+    tlbi vmalle1is // invalidate all TLB entries
+    dsb ish // ensure completion of TLB invalidatation
+    isb // clear pipeline
+
     msr elr_el1, x2
     msr spsr_el1, x3
     eret
@@ -60,6 +66,12 @@ load_regs:
 
     mov x0, x3
 
+    dsb ish
+    msr ttbr0_el1, x4
+    tlbi vmalle1is
+    dsb ish
+    isb
+
     msr elr_el1, x1
     msr spsr_el1, x2
     eret
@@ -76,7 +88,13 @@ set_current:
 
 .global exec_prog
 exec_prog:
-  msr spsr_el1, xzr
-  msr elr_el1, x0
-  msr sp_el0, x1
-  eret
+    dsb ish
+    msr ttbr0_el1, x2
+    tlbi vmalle1is
+    dsb ish
+    isb
+
+    msr spsr_el1, xzr
+    msr elr_el1, x0
+    msr sp_el0, x1
+    eret

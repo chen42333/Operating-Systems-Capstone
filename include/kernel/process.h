@@ -7,7 +7,7 @@
 #include "signal.h"
 
 #define MAX_PROC 1024
-#define STACK_SIZE 4096
+#define STACK_SIZE (1ULL << 14)
 #define NR_CALLEE_REGS 13 // x19 ~ x31, where x29 = fp, x30 = lr, x31 = sp
 #define fp reg[29 - 19]
 #define lr reg[30 - 19]
@@ -15,6 +15,12 @@
 
 #define EL0_W_DAIF 0x0 // EL0 with unmasked DAIF
 #define EL1H_W_DAIF 0x5 // EL1h (using SP1) with unmasked DAIF
+
+// Virtual memory address for user processes
+#define USR_CODE_START (void*)0x0
+#define USR_STACK_START (void*)0xffffffffb000
+#define USR_STACK_END (void*)0xfffffffff000
+#define USR_FRAMEBUF_START (void*)0x30000000
 
 typedef int pid_t;
 
@@ -39,11 +45,13 @@ struct pcb_t
     size_t wait_data;
     void (*sig_handler[_NSIG])();
     struct list signal_queue;
+    void *ttbr;
 };
 
 struct code_ref
 {
     void *code;
+    size_t size;
     int ref;
 };
 
@@ -52,9 +60,9 @@ extern struct pcb_t *pcb_table[MAX_PROC];
 
 extern struct pcb_t* get_current();
 extern void set_current(struct pcb_t *pcb);
-extern void switch_to(uint64_t *prev_reg, uint64_t *next_reg, void *next_pc, uint64_t next_pstat, void *next_args);
+extern void switch_to(uint64_t *prev_reg, uint64_t *next_reg, void *next_pc, uint64_t next_pstat, void *next_args, void *next_ttbr);
 extern void save_regs(void *addr, void *frame_ptr, void *ret_addr, void *stack_ptr);
-extern void load_regs(uint64_t *next_reg, void *next_pc, uint64_t next_pstat, void *next_args);
+extern void load_regs(uint64_t *next_reg, void *next_pc, uint64_t next_pstat, void *next_args, void *next_ttbr);
 
 void ps();
 void init_pcb();
@@ -67,11 +75,12 @@ void _exit();
 void wait(event e, size_t data);
 void wait_to_ready(void *ptr);
 
-inline static struct code_ref* init_code(void *code)
+inline static struct code_ref* init_code(void *code, size_t size)
 {
     struct code_ref *ret = malloc(sizeof(struct code_ref));
 
     ret->code = code;
+    ret->size = size;
     ret->ref = 1;
 
     return ret;

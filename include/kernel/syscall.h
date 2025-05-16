@@ -31,7 +31,7 @@ struct trap_frame
     size_t regs[TRAP_FRAME_REGS];
 };
 
-extern void exec_prog(void *addr, void *stack);
+extern void exec_prog(void *addr, void *stack, void *ttbr);
 
 void syscall_entry(struct trap_frame *frame);
 pid_t getpid();
