@@ -112,7 +112,7 @@ void map_code_and_stack(struct pcb_t *pcb)
     
     s_page_idx = (size_t)USR_STACK_START >> 12;
     e_page_idx = (size_t)USR_STACK_END >> 12;
-    fill_page_table(pgd_addr, s_page_idx, e_page_idx, (size_t)v2p_trans_kernel(stack_top - STACK_SIZE), PD_NX_EL0 | PD_USER_ACCESS | PD_ACCESS);
+    fill_page_table(pgd_addr, s_page_idx, e_page_idx, (size_t)v2p_trans_kernel(stack_top - STACK_EL0_SIZE), PD_NX_EL0 | PD_USER_ACCESS | PD_ACCESS);
 }
 
 void free_page_table(void *table_addr, enum page_table_lv addr_type)

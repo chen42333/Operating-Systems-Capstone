@@ -100,8 +100,8 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->el = 1;
     pcb->pstate = EL1H_W_DAIF;
     asm volatile("mrs %0, ttbr1_el1" : "=r"(pcb->ttbr));
-    pcb->stack[0] = malloc(STACK_SIZE) + STACK_SIZE;
-    pcb->stack[1] = malloc(STACK_SIZE) + STACK_SIZE;
+    pcb->stack[0] = malloc(STACK_EL0_SIZE) + STACK_EL0_SIZE;
+    pcb->stack[1] = malloc(STACK_EL1_SIZE) + STACK_EL1_SIZE;
     pcb->sp = (uint64_t)pcb->stack[1];
     pcb->fp = (uint64_t)pcb->stack[1];
     pcb->lr = (uintptr_t)exit;
@@ -212,12 +212,11 @@ static void kill_zombies()
     while (pcb)
     {
         deref_code(pcb->code);
-        if (pcb->el == 0)
-        {
-            free(pcb->stack[0] - STACK_SIZE);
+        if (pcb->stack[0])
+            free(pcb->stack[0] - STACK_EL0_SIZE);
+        if (pcb->ttbr)
             free_page_table(pcb->ttbr, PGD);
-        }
-        free(pcb->stack[1] - STACK_SIZE);
+        free(pcb->stack[1] - STACK_EL1_SIZE);
         pcb_table[pcb->pid] = NULL;
         free(pcb);
         pcb = list_pop(&dead_queue);

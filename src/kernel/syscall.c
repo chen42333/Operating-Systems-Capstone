@@ -112,11 +112,11 @@ int fork(struct trap_frame *frame)
     new_pcb->el = pcb->el;
     if (pcb->stack[0])
     {
-        memcpy(new_pcb->stack[0] - STACK_SIZE, pcb->stack[0] - STACK_SIZE, STACK_SIZE);
+        memcpy(new_pcb->stack[0] - STACK_EL0_SIZE, pcb->stack[0] - STACK_EL0_SIZE, STACK_EL0_SIZE);
         asm volatile("mrs %0, sp_el0" : "=r"(new_pcb->sp_el0));
         map_code_and_stack(new_pcb);
     }
-    memcpy(new_pcb->stack[1] - STACK_SIZE, pcb->stack[1] - STACK_SIZE, STACK_SIZE);
+    memcpy(new_pcb->stack[1] - STACK_EL1_SIZE, pcb->stack[1] - STACK_EL1_SIZE, STACK_EL1_SIZE);
     
     memcpy(new_pcb->sig_handler, pcb->sig_handler, sizeof(new_pcb->sig_handler));
 

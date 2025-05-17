@@ -7,7 +7,8 @@
 #include "signal.h"
 
 #define MAX_PROC 1024
-#define STACK_SIZE (1ULL << 14)
+#define STACK_EL0_SIZE (1ULL << 14)
+#define STACK_EL1_SIZE (1ULL << 13)
 #define NR_CALLEE_REGS 13 // x19 ~ x31, where x29 = fp, x30 = lr, x31 = sp
 #define fp reg[29 - 19]
 #define lr reg[30 - 19]
