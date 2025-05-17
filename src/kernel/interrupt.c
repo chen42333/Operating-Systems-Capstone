@@ -4,9 +4,10 @@
 #include "interrupt.h"
 #include "printf.h"
 #include "process.h"
+#include "syscall.h"
 
 // For test exception and interrupt handler
-#define TEST_EXCEPTION
+// #define TEST_EXCEPTION
 // #define TEST_INT
 
 // For test preemption
@@ -205,9 +206,15 @@ void core_timer_enable()
 
 void exception_entry()
 {
-#ifdef TEST_EXCEPTION
+    size_t value;
 
-    void *value;
+    asm volatile ("mrs %0, esr_el1" : "=r"(value));
+    printf("Segmentation fault\r\nESR: 0x%lx\r\nEC: 0x%lx\r\n", value, (value & 0xfc000000) >> 26);
+    enable_int();
+    exit();
+    disable_int();
+
+#ifdef TEST_EXCEPTION
 
     asm volatile ("mrs %0, spsr_el1" : "=r"(value));
     printf("SPSR_EL1: 0x%x\r\n", value);

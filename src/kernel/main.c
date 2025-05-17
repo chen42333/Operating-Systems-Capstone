@@ -178,7 +178,7 @@ void page_alloc()
         return;
     }
 
-    data = buddy_malloc(size);
+    data = p2v_trans_kernel(buddy_malloc(size));
 
     if (data != NULL)
         printf("Allocator test: The pages allocated are from 0x%x\r\n", (uintptr_t)data);
@@ -200,7 +200,13 @@ void page_free()
     else    
         ptr = (void*)(uintptr_t)hstr2u32(str, strlen(str));
     
-    buddy_free(v2p_trans(ptr));
+    ptr = v2p_trans(ptr);
+    if (ptr)
+        buddy_free(ptr);
+    else
+    {
+        err("Invalid page\r\n");
+    }
 }
 
 void _malloc()
@@ -248,7 +254,7 @@ void _free()
     else    
         ptr = (void*)(uintptr_t)hstr2u32(str, strlen(str));
     
-    free(v2p_trans(ptr));
+    free(ptr);
 }
 
 void foo(void *args)

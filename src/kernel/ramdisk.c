@@ -172,7 +172,7 @@ void* load_prog(char *filename, size_t *prog_size)
         if ((!strncmp("./", record->payload, 2) && !strcmp(filename, record->payload + 2)) || (strncmp("./", record->payload, 2) && !strcmp(filename, record->payload)) )
         {
             int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
-            prog_addr = buddy_malloc(file_size / PAGE_SIZE + (file_size % PAGE_SIZE > 0));
+            prog_addr = malloc((file_size / PAGE_SIZE + (file_size % PAGE_SIZE > 0)) * PAGE_SIZE);
             *prog_size = file_size;
 
             for (int i = 0; i < file_size; i++)

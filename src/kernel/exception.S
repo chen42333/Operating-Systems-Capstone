@@ -1,5 +1,7 @@
 .equ CORE0_IRQ_SOURCE, 0x40000060 + v_kernel_space
 .equ AUX_MU_IIR_REG, 0x3f215048 + v_kernel_space
+.equ EC_MASK, 0xfc000000
+.equ EC_SVC, 0b010101
 
 .section .text
 
@@ -111,6 +113,7 @@ empty:
 exception_handler:
     save_all
     inc_irq_nested_count
+exception:
     bl exception_entry
     dec_irq_nested_count
     load_all
@@ -119,6 +122,11 @@ exception_handler:
 syscall_handler:
     save_all
     inc_irq_nested_count
+    mrs x0, esr_el1
+    and x0, x0, EC_MASK
+    lsr x0, x0, #26
+    cmp x0, EC_SVC
+    bne exception // Not system call
     mov x0, sp
     bl syscall_entry
     dec_irq_nested_count

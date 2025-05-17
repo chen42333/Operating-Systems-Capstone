@@ -229,7 +229,7 @@ void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */)
     buddy_delete_free_block(idx, list_idx);
     buddy_cut_block(idx, list_idx, size);
 
-    return p2v_trans_kernel(idx * PAGE_SIZE + buddy_data.base); // For kernel space
+    return idx * PAGE_SIZE + buddy_data.base; // For kernel space
 }
 
 static void buddy_merge_block(int idx, int block_size_exp)
@@ -443,12 +443,18 @@ void* malloc(size_t size)
     if (size == 0)
         return NULL;
     if (size >= PAGE_SIZE)
-        return buddy_malloc((size - 1) / PAGE_SIZE + 1);
+    {
+        void *ret = buddy_malloc((size - 1) / PAGE_SIZE + 1);
+        return p2v_trans_kernel(ret);
+    }
     
     for (size_t i = 1; i < size; i <<= 1, size_exp++) ;
 
     if (size_exp > MAX_POOL_SIZE_EXP)
-        return buddy_malloc(1);
+    {
+        void *ret = buddy_malloc(1);
+        return p2v_trans_kernel(ret);
+    }
     if (size_exp < MIN_POOL_SIZE_EXP)
         size_exp = MIN_POOL_SIZE_EXP;
 
@@ -485,14 +491,14 @@ void* malloc(size_t size)
 
     // There's no free chunk in the memory pool, allocate a new pageframe
     addr = buddy_malloc(1);
-    node_ptr = &dynamic_node_arr[(v2p_trans(addr) - buddy_data.base) / PAGE_SIZE];
+    node_ptr = &dynamic_node_arr[(addr - buddy_data.base) / PAGE_SIZE];
 
     if (prev == NULL) // The first pageframe in the memory pool
         mem_pool[size_exp - MIN_POOL_SIZE_EXP] = node_ptr;
     else
         prev->next = node_ptr;
 
-    node_ptr->addr = addr; // Virtual address
+    node_ptr->addr = p2v_trans_kernel(addr); // Virtual address
     node_ptr->chunk_size = 1 << size_exp;
     node_ptr->sum += 1;
     node_ptr->bitmap[0] |= 0b1;
@@ -517,7 +523,7 @@ void free(void *vptr)
     int chunk_idx;
     struct dynamic_node *node_ptr;
 
-    void *ptr = v2p_trans(vptr);
+    void *ptr = v2p_trans_kernel(vptr);
     page_idx = (ptr - buddy_data.base) / PAGE_SIZE;
     node_ptr = &dynamic_node_arr[page_idx];
 
@@ -573,7 +579,7 @@ void free(void *vptr)
         for (int i = 0; i < BITMAP_ARR; i++)
             node_ptr->bitmap[i] = 0;
 
-        buddy_free(v2p_trans(node_ptr->addr));
+        buddy_free(v2p_trans_kernel(node_ptr->addr));
         node_ptr->addr = buddy_data.base + page_idx * PAGE_SIZE; // Reset to physical address
     }
 }

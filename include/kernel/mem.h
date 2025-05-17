@@ -51,7 +51,7 @@ void memcpy(void *dst, void *src, uint32_t size);
 void* memset(void *s, char c, size_t n);
 void* simple_malloc(size_t size);
 void buddy_init();
-void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */); // Virtual address
+void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */); // Physical address
 void buddy_free(void *ptr); // Physical address
 void dynamic_allocator_init();
 void* malloc(size_t size); // Virtual address

@@ -38,10 +38,7 @@ void *v2p_trans(void *virtual_addr)
         entry = *(size_t*)p2v_trans_kernel(entry_ptr);
 
         if (!(entry & 0b1))
-        {
-            err("Invalid page\r\n");
             return NULL;
-        }
 
         if (!(entry & 0b10) || i == 3) // Page or block found
             break;
@@ -55,7 +52,7 @@ void *v2p_trans(void *virtual_addr)
     return (void*)((entry & TABLE_ADDR_MASK) | ((size_t)virtual_addr & offset_mask));
 }
 
-void fill_page_table(void *pgd_addr, size_t s_page_idx, size_t e_page_idx, size_t start_pa)
+void fill_page_table(void *pgd_addr, size_t s_page_idx, size_t e_page_idx, size_t start_pa, size_t flags)
 {
     size_t *table_addr[NUM_PT_LEVEL]; // 0 -> PTE addr, 1 -> PMD addr, 2 -> PUD addr, 3 -> PGD addr
     int idx = 0;
@@ -78,7 +75,7 @@ void fill_page_table(void *pgd_addr, size_t s_page_idx, size_t e_page_idx, size_
     {
         size_t pte_entry;
 
-        pte_entry = (PAGE_SIZE * idx + start_pa) | PD_ACCESS | PD_USER_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_PAGE;
+        pte_entry = (PAGE_SIZE * idx + start_pa) | PD_USER_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_PAGE | flags;
         *((size_t*)table_addr[0] + IDX(s_page_idx, 0)) = pte_entry;
 
         if (s_page_idx + 1 == e_page_idx)
@@ -111,11 +108,11 @@ void map_code_and_stack(struct pcb_t *pcb)
     s_page_idx = (size_t)USR_CODE_START >> 12;
     num_pages = (pcb->code->size - 1) / PAGE_SIZE + 1;
     e_page_idx = s_page_idx + num_pages;
-    fill_page_table(pgd_addr, s_page_idx, e_page_idx, (size_t)v2p_trans_kernel(code_addr));
+    fill_page_table(pgd_addr, s_page_idx, e_page_idx, (size_t)v2p_trans_kernel(code_addr), PD_USER_ACCESS | PD_ACCESS);
     
     s_page_idx = (size_t)USR_STACK_START >> 12;
     e_page_idx = (size_t)USR_STACK_END >> 12;
-    fill_page_table(pgd_addr, s_page_idx, e_page_idx, (size_t)v2p_trans_kernel(stack_top - STACK_SIZE));
+    fill_page_table(pgd_addr, s_page_idx, e_page_idx, (size_t)v2p_trans_kernel(stack_top - STACK_SIZE), PD_NX_EL0 | PD_USER_ACCESS | PD_ACCESS);
 }
 
 void free_page_table(void *table_addr, enum page_table_lv addr_type)
@@ -132,4 +129,63 @@ void free_page_table(void *table_addr, enum page_table_lv addr_type)
     }
 
     free(v_table_addr);
+}
+
+void* mmap(void* addr, size_t len, int prot, int flags, int fd, int file_offset)
+{
+    void *ttbr;
+    size_t num_pages = len / PAGE_SIZE + (len % PAGE_SIZE > 0);
+    size_t s_page_idx, e_page_idx;
+    size_t continuous_pages = 0;
+    size_t pte_flags = 0;
+
+    asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr));
+
+    for (void *i = addr - (size_t)addr % PAGE_SIZE; continuous_pages < num_pages; i += PAGE_SIZE)
+    {
+        if (v2p_trans(i))
+            continuous_pages = 0;
+        else
+        {
+            if (!continuous_pages)
+                addr = i;
+            continuous_pages++;
+        }
+    }
+
+    s_page_idx = (size_t)addr / PAGE_SIZE;
+    e_page_idx = s_page_idx + num_pages;
+
+
+    // if (flags & MAP_POPULATE)
+        pte_flags |= PD_ACCESS;
+    if (!(prot & PROT_NONE))
+        pte_flags |= PD_USER_ACCESS;
+    if (!(prot & PROT_EXEC))
+        pte_flags |= PD_NX_EL0;
+    if (!(prot & PROT_WRITE))
+        pte_flags |= PD_RDONLY;
+
+    for (size_t pages = num_pages; s_page_idx < e_page_idx && pages > 0; pages >>= 1)
+    {
+        while (e_page_idx - s_page_idx >= pages)
+        {
+            void *address = malloc(pages * PAGE_SIZE);
+
+            if (!address)
+                break;
+
+            fill_page_table(p2v_trans_kernel(ttbr), s_page_idx, s_page_idx + pages, (size_t)v2p_trans_kernel(address), pte_flags);
+            s_page_idx += pages;
+        }
+    }
+
+    if (s_page_idx < e_page_idx)
+    {
+        // FIXME: should release allocated pages here
+        err("No enough space\r\n");
+        return NULL;
+    }
+
+    return addr;
 }

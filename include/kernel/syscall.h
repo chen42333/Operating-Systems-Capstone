@@ -23,7 +23,8 @@ enum syscall
     KILL = 7,
     SIGNAL = 8, 
     SIGNAL_KILL = 9,
-    SIGRET = 10
+    MMAP = 10,
+    SIGRET = 11
 };
 
 struct trap_frame

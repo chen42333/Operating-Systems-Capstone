@@ -9,6 +9,14 @@
 #define NUM_PT_ENTRIES (1ULL << 9)
 #define TABLE_ADDR_MASK 0xfffffffff000 // Bit 47~12
 
+#define PROT_NONE 0x0
+#define PROT_READ 0x1
+#define PROT_WRITE 0x2
+#define PROT_EXEC 0x4
+
+# define MAP_ANONYMOUS 0x20
+# define MAP_POPULATE 0x8000 
+
 enum page_table_lv {
     PTE = 0,
     PMD = 1,
@@ -19,8 +27,9 @@ enum page_table_lv {
 
 void finer_granu_paging();
 void *v2p_trans(void *virtual_addr);
-void fill_page_table(void *pgd_addr, size_t s_page_idx, size_t e_page_idx, size_t start_pa); // Address type: (p, v, v, p)
+void fill_page_table(void *pgd_addr, size_t s_page_idx, size_t e_page_idx, size_t start_pa, size_t flags); // Address type: (v, v, v, p)
 void map_code_and_stack(struct pcb_t *pcb);
 void free_page_table(void *table_addr, enum page_table_lv addr_type); // Physical
+void* mmap(void* addr, size_t len, int prot, int flags, int fd, int file_offset);
 
 #endif

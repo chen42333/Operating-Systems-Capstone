@@ -40,6 +40,10 @@ void syscall_entry(struct trap_frame *frame)
         case SIGNAL_KILL:
             signal_kill((int)frame->arg(0), (int)frame->arg(1));
             break;
+        case MMAP:
+        frame->RET = (size_t)mmap((void*)frame->arg(0), (size_t)frame->arg(1), (int)frame->arg(2), 
+                                    (int)frame->arg(3), (int)frame->arg(4), (int)frame->arg(5));
+            break;
         case SIGRET:
             sigreturn();
             break;
