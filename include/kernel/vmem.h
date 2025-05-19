@@ -26,10 +26,12 @@ enum page_table_lv {
 };
 
 void finer_granu_paging();
-void *v2p_trans(void *virtual_addr);
+void *v2p_trans(void *virtual_addr, void *ttbr0);
 void fill_page_table(void *pgd_addr, size_t s_page_idx, size_t e_page_idx, size_t start_pa, size_t flags); // Address type: (v, v, v, p)
-void map_code_and_stack(struct pcb_t *pcb);
+void init_ttbr(struct pcb_t *pcb);
 void free_page_table(void *table_addr, enum page_table_lv addr_type); // Physical
+void page_table_fork(void *dst_table_addr, void *src_table_addr, enum page_table_lv addr_type);  // Physical
+void replace_page_entry(void *ttbr0, void *virtual_addr, void *new_addr, bool w_permission);
 void* mmap(void* addr, size_t len, int prot, int flags, int fd, int file_offset);
 
 #endif

@@ -6,7 +6,7 @@
 
 int mbox_call(unsigned char channel, uint32_t *mailbox)
 {
-    uint32_t *p_mbox = v2p_trans((void*)mailbox);
+    uint32_t *p_mbox = v2p_trans((void*)mailbox, NULL);
     uint32_t *v_mbox = p2v_trans_kernel(p_mbox);
     uint32_t data = ((unsigned long)p_mbox & ~0xf) | channel;
 
@@ -34,6 +34,7 @@ int mbox_call(unsigned char channel, uint32_t *mailbox)
                 // Map the address of frame buffer for user process
                 // The real address of frame buffer is the return value & 0x3fffffff
                 fill_page_table(p2v_trans_kernel(ttbr), s_page_idx, e_page_idx, v_mbox[idx + 2] & 0x3fffffff, PD_USER_ACCESS | PD_ACCESS);
+                add_section(get_current(), DEVICE, USR_FRAMEBUF_START, num_pages * PAGE_SIZE);
                 v_mbox[idx + 2] = (uint32_t)(uintptr_t)USR_FRAMEBUF_START;
             }
 

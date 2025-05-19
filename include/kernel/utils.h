@@ -33,6 +33,8 @@ extern void *ramdisk_saddr;
 extern void *ramdisk_eaddr;
 extern void *usable_memory[2];
 
+extern void invalidate_tlb();
+
 uint32_t big2host(uint32_t num);
 
 inline static void set32(void *addr, uint32_t value) {

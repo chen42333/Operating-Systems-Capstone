@@ -43,6 +43,7 @@ int main(void *_dtb_addr)
     buddy_init();
     dynamic_allocator_init();
     reserve_mem_regions();
+    page_ref_init();
 
     finer_granu_paging();
 
@@ -88,7 +89,7 @@ int main(void *_dtb_addr)
             mem_alloc();
         else if (!strcmp("ldProg", arg0))
         {
-            pid_t pid = fork(NULL);
+            pid_t pid = fork();
 
             if (pid == 0)
                 exec(strtok(NULL, ""), NULL);
@@ -200,7 +201,7 @@ void page_free()
     else    
         ptr = (void*)(uintptr_t)hstr2u32(str, strlen(str));
     
-    ptr = v2p_trans(ptr);
+    ptr = v2p_trans(ptr, NULL);
     if (ptr)
         buddy_free(ptr);
     else
@@ -273,13 +274,13 @@ void fork_test(){
     printf("\r\nFork Test, pid %d\r\n", getpid());
     int cnt = 1;
     int ret = 0;
-    if ((ret = fork(NULL)) == 0) { // child
+    if ((ret = fork()) == 0) { // child
         long long cur_sp;
         asm volatile("mov %0, sp" : "=r"(cur_sp));
         printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\r\n", getpid(), cnt, &cnt, cur_sp);
         ++cnt;
 
-        if ((ret = fork(NULL)) != 0){
+        if ((ret = fork()) != 0){
             asm volatile("mov %0, sp" : "=r"(cur_sp));
             printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\r\n", getpid(), cnt, &cnt, cur_sp);
         }

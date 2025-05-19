@@ -27,6 +27,7 @@ typedef int pid_t;
 
 typedef enum stat { RUN, READY, WAIT, DEAD } stat;
 typedef enum event { PROC, READ, WRITE, _LAST } event;
+typedef enum sec { TEXT, HEAP, STACK, DEVICE } sec;
 
 struct pcb_t
 {
@@ -42,18 +43,19 @@ struct pcb_t
     stat state;
     struct list *wait_q;
     uint64_t pstate;
-    struct code_ref *code;
+    void *code; // Physical address
     size_t wait_data;
     void (*sig_handler[_NSIG])();
     struct list signal_queue;
+    struct list sections;
     void *ttbr;
 };
 
-struct code_ref
+struct section
 {
-    void *code;
+    sec type;
+    void *base; // Virtual address
     size_t size;
-    int ref;
 };
 
 extern struct list ready_queue, dead_queue, wait_queue[_LAST];
@@ -73,42 +75,10 @@ void switch_to_next(struct pcb_t *prev);
 void schedule();
 void idle();
 void _exit();
+void add_section(struct pcb_t *pcb, sec type, void *base, size_t len);
+void free_sections(struct list *sections, void *ttbr);
+bool in_section(void *ptr, void *addr);
 void wait(event e, size_t data);
 void wait_to_ready(void *ptr);
-
-inline static struct code_ref* init_code(void *code, size_t size)
-{
-    struct code_ref *ret = malloc(sizeof(struct code_ref));
-
-    ret->code = code;
-    ret->size = size;
-    ret->ref = 1;
-
-    return ret;
-}
-
-inline static struct code_ref* ref_code(struct code_ref *code)
-{
-    disable_int();
-    code->ref++;
-    enable_int();
-
-    return code;
-}
-
-inline static struct code_ref* deref_code(struct code_ref *code)
-{
-    disable_int();
-
-    if (--code->ref == 0)
-    {
-        free(code->code);
-        free(code);
-    }
-
-    enable_int();
-
-    return NULL;
-}
 
 #endif

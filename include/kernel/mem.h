@@ -37,6 +37,12 @@ struct dynamic_node
     struct dynamic_node *next;
 };
 
+struct page
+{
+    uint16_t ref_count;
+    uint8_t w_permission;
+};
+
 inline static void *p2v_trans_kernel(void *physical_addr)
 {
     return physical_addr + (size_t)v_kernel_space;
@@ -60,5 +66,11 @@ void free(void *vptr); // Virtual address
 void memory_reserve(void *start, void *end);
 void reserve_mem_regions();
 bool mem_region(void *p, char *name);
+void page_ref_init();
+bool get_w_permission(void *ptr); // Physical address
+void set_w_permission(void *ptr, bool w); // Physical address
+uint16_t get_ref_count(void *ptr); // Physical address
+void ref_page(void *ptr); // Physical address
+void deref_page(void *ptr); // Physical address
 
 #endif

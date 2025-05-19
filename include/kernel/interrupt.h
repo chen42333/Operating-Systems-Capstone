@@ -8,6 +8,19 @@
 #define CORE0_TIMER_IRQ_CTRL (void*)(0x40000040 + v_kernel_space)
 #define TIMER_INT 10 // ms
 
+// Bit 31~26 of ESR
+#define EC_MASK 0xfc000000
+#define EC_DATA_ABORT 0b100100
+#define EC_INSTRUCTION_ABORT 0b100000
+// Bit 5~2 of ESR
+#define DFSC_MASK 0x3c
+#define DFSC_ADDR_SIZE 0b0000
+#define DFSC_TRANSLATION 0b0001
+#define DFSC_ACC_FLAG 0b0010
+#define DFSC_PERMISSION 0b0011
+// Bit 1~0 of ESR
+#define LEVEL_MASK 0x3
+
 extern struct ring_buf task_queue;
 extern struct task_queue_element task_queue_buf[BUFLEN];
 extern volatile int irq_nested_count;

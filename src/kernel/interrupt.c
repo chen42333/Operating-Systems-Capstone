@@ -5,6 +5,7 @@
 #include "printf.h"
 #include "process.h"
 #include "syscall.h"
+#include "vmem.h"
 
 // For test exception and interrupt handler
 // #define TEST_EXCEPTION
@@ -206,15 +207,8 @@ void core_timer_enable()
 
 void exception_entry()
 {
+   #ifdef TEST_EXCEPTION
     size_t value;
-
-    asm volatile ("mrs %0, esr_el1" : "=r"(value));
-    printf("Segmentation fault\r\nESR: 0x%lx\r\nEC: 0x%lx\r\n", value, (value & 0xfc000000) >> 26);
-    enable_int();
-    exit();
-    disable_int();
-
-#ifdef TEST_EXCEPTION
 
     asm volatile ("mrs %0, spsr_el1" : "=r"(value));
     printf("SPSR_EL1: 0x%x\r\n", value);
@@ -224,6 +218,107 @@ void exception_entry()
     printf("ESR_EL1: 0x%x\r\n", value);
 
 #endif
+    size_t esr, ec;
+
+    asm volatile ("mrs %0, esr_el1" : "=r"(esr));
+    ec = (esr & EC_MASK) >> 26;
+
+    if (ec == EC_DATA_ABORT || ec == EC_INSTRUCTION_ABORT)
+    {
+        size_t dfsc;
+        void *v_fault_addr;
+
+        dfsc = (esr & DFSC_MASK) >> 2;
+        asm volatile("mrs %0, far_el1" : "=r"(v_fault_addr));
+
+        if (dfsc == DFSC_TRANSLATION)
+        {
+            struct pcb_t *pcb = get_current();
+            struct section *s = list_find(&pcb->sections, in_section, v_fault_addr);
+
+            if (s)
+            {
+                void *v_ttbr = p2v_trans_kernel(pcb->ttbr);
+                size_t s_page_idx, e_page_idx;
+                void *physical_addr;
+
+                switch (s->type)
+                {
+                    case TEXT:
+                        s_page_idx = (size_t)USR_CODE_START / PAGE_SIZE;
+                        e_page_idx = s_page_idx + (s->size - 1) / PAGE_SIZE + 1;
+                        physical_addr = pcb->code;
+                        fill_page_table(v_ttbr, s_page_idx, e_page_idx, (size_t)physical_addr, PD_USER_ACCESS | PD_ACCESS); 
+                        for (int i = 0; i < s->size; i += PAGE_SIZE)
+                            ref_page(pcb->code + i);
+                        invalidate_tlb();
+                        break;
+                    case STACK:
+                    case HEAP:
+                        s_page_idx = (size_t)v_fault_addr / PAGE_SIZE;
+                        e_page_idx = s_page_idx + 1;
+                        physical_addr = v2p_trans_kernel(malloc(PAGE_SIZE));
+                        fill_page_table(v_ttbr, s_page_idx, e_page_idx, (size_t)physical_addr, PD_NX_EL0 | PD_USER_ACCESS | PD_ACCESS);
+                        ref_page(physical_addr);
+                        invalidate_tlb();
+                        break;
+                    case DEVICE:
+                    default:
+                        goto seg_fault;
+                    break;
+                }
+
+                enable_int();
+                printf("[Translation fault]: 0x%lx\r\n", v_fault_addr);
+                disable_int();
+            }
+            else
+                goto seg_fault;
+
+            return;
+        } else if (dfsc == DFSC_PERMISSION) {
+            void *fault_addr = v2p_trans(v_fault_addr, NULL);
+            void *fault_page = (void*)((size_t)fault_addr & ~(PAGE_SIZE - 1));
+            
+            if (get_w_permission(fault_page)) // COW
+            {
+                if (get_ref_count(fault_page) > 1)
+                {
+                    void *v_fault_page = p2v_trans_kernel(fault_page);
+                    void *v_new_page = malloc(PAGE_SIZE);
+                    void *new_page = v2p_trans_kernel(v_new_page);
+
+                    memcpy(v_new_page, v_fault_page, PAGE_SIZE);
+                    replace_page_entry(NULL, v_fault_addr, new_page, true);
+                    invalidate_tlb();
+
+                    deref_page(fault_page);
+                    ref_page(new_page);
+
+                    enable_int();
+                    printf("[Copy-on-write]: 0x%lx\r\n", v_fault_addr);
+                    disable_int();
+                } else {
+                    replace_page_entry(NULL, v_fault_addr, fault_addr, true);
+                    invalidate_tlb();
+                }
+            }
+            else
+                goto seg_fault;
+
+            return;
+        }
+
+seg_fault: 
+        enable_int();
+        printf("[Segmentation fault]: Kill Process\r\n");
+        exit();
+        disable_int();
+    } else {
+        enable_int();
+        printf("ESR: 0x%lx\r\nEC, 0x%lx\r\n", esr, ec);
+        disable_int();
+    }
 }
 
 void process_task(struct task_queue_element *task) // Interrupt is disabled after process_task()

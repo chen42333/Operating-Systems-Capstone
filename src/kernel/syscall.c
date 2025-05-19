@@ -23,7 +23,7 @@ void syscall_entry(struct trap_frame *frame)
             frame->RET = (size_t)exec((const char*)frame->arg(0), (char *const*)frame->arg(1));
             break;
         case FORK:
-            frame->RET = (size_t)fork(frame);
+            frame->RET = (size_t)fork();
             break;
         case EXIT:
             exit();
@@ -74,17 +74,24 @@ int exec(const char* name, char *const argv[])
     }
 
     disable_int();
+
+    if (pcb->el == 0)
+    {
+        free_sections(&pcb->sections, pcb->ttbr);
+        free_page_table(pcb->ttbr, PGD);
+    }
     
     pcb->el = 0;
     pcb->pstate = EL0_W_DAIF;
     pcb->lr = (uintptr_t)_exit;
-    if (pcb->code)
-        deref_code(pcb->code);
-    pcb->code = init_code(prog_addr, prog_size);
+    pcb->code = v2p_trans_kernel(prog_addr);
     pcb->sp_el0 = (uint64_t)USR_STACK_END;
 
-    map_code_and_stack(pcb);
+    init_ttbr(pcb);
 
+    add_section(pcb, TEXT, USR_CODE_START, prog_size);
+    add_section(pcb, STACK, USR_STACK_START, STACK_EL0_SIZE);
+    
     enable_int();
 
     exec_prog(USR_CODE_START, USR_STACK_END, pcb->ttbr);
@@ -97,7 +104,28 @@ static bool match_pid(void *ptr, void *data)
     return (pid_t)((struct pcb_t*)ptr)->wait_data == *(pid_t*)data;
 }
 
-int fork(struct trap_frame *frame)
+static void add_ref_sections(struct list *l, void *ttbr)
+{
+    struct node *tmp = l->head;
+
+    while (tmp)
+    {
+        struct section *s = tmp->ptr;
+
+        if (s->type != DEVICE)
+        {
+            for (size_t i = 0; i < s->size; i += PAGE_SIZE)
+            {
+                void *ptr = v2p_trans(s->base + i, ttbr);
+                ref_page(ptr);
+            }
+        }
+
+        tmp = tmp->next;
+    }
+}
+
+int fork()
 {
     struct pcb_t *pcb = get_current(), *new_pcb;
     void *frame_ptr, *stack_ptr, *tmp;;
@@ -108,13 +136,16 @@ int fork(struct trap_frame *frame)
     new_pid = thread_create(&&out, pcb->args);
 
     new_pcb = pcb_table[new_pid];
-    new_pcb->code = ref_code(pcb->code);
     new_pcb->el = pcb->el;
-    if (pcb->stack[0])
+    if (pcb->el == 0)
     {
-        memcpy(new_pcb->stack[0] - STACK_EL0_SIZE, pcb->stack[0] - STACK_EL0_SIZE, STACK_EL0_SIZE);
+        add_ref_sections(&pcb->sections, pcb->ttbr);
+        new_pcb->code = pcb->code;
+        list_copy(&new_pcb->sections, &pcb->sections);
+        init_ttbr(new_pcb);
+        page_table_fork(new_pcb->ttbr, pcb->ttbr, PGD);
+        invalidate_tlb();
         asm volatile("mrs %0, sp_el0" : "=r"(new_pcb->sp_el0));
-        map_code_and_stack(new_pcb);
     }
     memcpy(new_pcb->stack[1] - STACK_EL1_SIZE, pcb->stack[1] - STACK_EL1_SIZE, STACK_EL1_SIZE);
     

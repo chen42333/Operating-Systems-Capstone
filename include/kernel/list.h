@@ -38,5 +38,6 @@ void* list_pop(struct list *l);
 void* list_delete(struct list *l, void *ptr);
 void* list_find(struct list *l, bool (*match)(void *ptr, void *data), void *match_data);
 void list_rm_and_process(struct list *l, bool (*match)(void *ptr, void *data), void *match_data, void (*op)(void *ptr));
+void list_copy(struct list *dst, struct list *src);
 
 #endif

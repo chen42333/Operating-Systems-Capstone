@@ -135,3 +135,18 @@ void list_rm_and_process(struct list *l, bool (*match)(void *ptr, void *data), v
 
     enable_int();
 }
+
+void list_copy(struct list *dst, struct list *src)
+{
+    disable_int();
+
+    struct node *tmp = src->head;
+
+    while (tmp)
+    {
+        list_push(dst, tmp->ptr);
+        tmp = tmp->next;
+    }
+
+    enable_int();
+}

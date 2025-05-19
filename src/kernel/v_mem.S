@@ -46,3 +46,11 @@ idt_paging_set:
 
     ldr x2, =boot_rest // indirect branch to the virtual address
     br x2
+
+.global invalidate_tlb
+invalidate_tlb:
+    dsb ish
+    tlbi vmalle1is
+    dsb ish
+    isb
+    ret

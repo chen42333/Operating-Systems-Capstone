@@ -100,7 +100,6 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->el = 1;
     pcb->pstate = EL1H_W_DAIF;
     asm volatile("mrs %0, ttbr1_el1" : "=r"(pcb->ttbr));
-    pcb->stack[0] = malloc(STACK_EL0_SIZE) + STACK_EL0_SIZE;
     pcb->stack[1] = malloc(STACK_EL1_SIZE) + STACK_EL1_SIZE;
     pcb->sp = (uint64_t)pcb->stack[1];
     pcb->fp = (uint64_t)pcb->stack[1];
@@ -205,16 +204,49 @@ void _exit()
     asm volatile ("svc #0":: "r"(syscall_id): "memory");
 }
 
+void add_section(struct pcb_t *pcb, sec type, void *base, size_t len)
+{
+    struct section *s;
+
+    s = malloc(sizeof(struct section));
+    s->type = type;
+    s->base = base;
+    s->size = len;
+    list_push(&pcb->sections, s);
+}
+
+void free_sections(struct list *sections, void *ttbr)
+{
+    struct section *s = list_pop(sections);
+
+    while (s)
+    {
+        void *base = v2p_trans(s->base, ttbr);
+        for (size_t i = 0; i < s->size; i += PAGE_SIZE)
+            deref_page(base + i);
+        
+        s = list_pop(sections);
+    }
+}
+
+bool in_section(void *ptr, void *addr)
+{
+    struct section *s = ptr;
+
+    if (addr >= s->base && addr < s->base + s->size)
+        return true;
+    
+    return false;
+}
+
 static void kill_zombies()
 {
     struct pcb_t *pcb = list_pop(&dead_queue);
 
     while (pcb)
     {
-        deref_code(pcb->code);
-        if (pcb->stack[0])
-            free(pcb->stack[0] - STACK_EL0_SIZE);
-        if (pcb->ttbr)
+        free_sections(&pcb->sections, pcb->ttbr);
+        if (pcb->el == 0)
             free_page_table(pcb->ttbr, PGD);
         free(pcb->stack[1] - STACK_EL1_SIZE);
         pcb_table[pcb->pid] = NULL;
