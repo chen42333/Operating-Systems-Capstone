@@ -11,6 +11,7 @@
 #include "printf.h"
 #include "syscall.h"
 #include "vmem.h"
+#include "tmpfs.h"
 
 /* Test functions */
 void mem_alloc();
@@ -48,6 +49,9 @@ int main(void *_dtb_addr)
     page_ref_init();
 
     finer_granu_paging();
+
+    vfs_init();
+    tmpfs_init();
 
     init_pcb();
     thread_create(idle, NULL);
