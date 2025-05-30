@@ -8,7 +8,7 @@ void syscall_entry(struct trap_frame *frame)
 {
     enable_int();
 
-    switch ((enum syscall)frame->nr_syscall)
+    switch ((syscall)frame->nr_syscall)
     {
         case GET_PID:
             frame->RET = (size_t)getpid();

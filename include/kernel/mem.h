@@ -53,7 +53,7 @@ inline static void *v2p_trans_kernel(void *physical_addr)
     return physical_addr - (size_t)v_kernel_space;
 }
 
-void memcpy(void *dst, void *src, uint32_t size);
+void memcpy(void *dst, const void *src, uint32_t size);
 void* memset(void *s, char c, size_t n);
 void* simple_malloc(size_t size);
 void buddy_init();

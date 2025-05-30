@@ -23,8 +23,10 @@ struct ring_buf timer_queue, task_queue;
 struct timer_queue_element timer_queue_buf[BUFLEN];
 struct task_queue_element task_queue_buf[BUFLEN];
 extern struct ring_buf r_buf, w_buf;
-static enum prio cur_priority = INIT_PRIO;
+static prio cur_priority = INIT_PRIO;
 bool need_schedule = false;
+
+extern struct strtok_ctx *ctx_shell;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data)
 {
@@ -72,7 +74,7 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
     }
 }
 
-void add_task(void(*callback)(void*), enum prio priority, void *data)
+void add_task(void(*callback)(void*), prio priority, void *data)
 {
     struct task_queue_element element;
 
@@ -324,7 +326,7 @@ seg_fault:
 void process_task(struct task_queue_element *task) // Interrupt is disabled after process_task()
 {
     struct task_queue_element element;
-    enum prio tmp = cur_priority;
+    prio tmp = cur_priority;
 
     if (task != NULL)
         element = *task;
@@ -403,13 +405,13 @@ int set_timeout()
     uint32_t sec;
     uint64_t freq;
 
-    if ((msg = strtok(NULL, " ")) == NULL)
+    if ((msg = strtok_r(NULL, " ", &ctx_shell)) == NULL)
         return -1;
 
-    if ((sec_str = strtok(NULL, " ")) == NULL)
+    if ((sec_str = strtok_r(NULL, " ", &ctx_shell)) == NULL)
         return -1;
     
-    if ((tail = strtok(NULL, "")) != NULL)
+    if ((tail = strtok_r(NULL, "", &ctx_shell)) != NULL)
         return -1;
     
     if ((sec = str2u32(sec_str, strlen(sec_str))) == 0)

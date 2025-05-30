@@ -25,15 +25,15 @@ extern struct ring_buf task_queue;
 extern struct task_queue_element task_queue_buf[BUFLEN];
 extern volatile int irq_nested_count;
 
-enum prio {
+typedef enum prio {
     WRITE_PRIO = 0,
     TIMER_PRIO = 1,
     READ_PRIO = 2,
     INIT_PRIO = INT_MAX
-};
+} prio;
 
 void add_timer(void(*callback)(void*), uint64_t duration, void *data);
-void add_task(void(*callback)(void*), enum prio priority, void *data);
+void add_task(void(*callback)(void*), prio priority, void *data);
 void timer_int();
 void process_timer(void* data);
 void elasped_time(void* data);

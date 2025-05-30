@@ -12,9 +12,10 @@
 
 static int dtb_str_idx = 0;
 
-void memcpy(void *dst, void *src, uint32_t size)
+void memcpy(void *dst, const void *src, uint32_t size)
 {
-    volatile char *d = dst, *s = src;
+    volatile char *d = dst;
+    volatile const char *s = src;
 
     for (int i = 0; i < size; i++)
         *d++ = *s++;

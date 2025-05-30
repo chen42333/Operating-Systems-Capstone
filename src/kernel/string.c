@@ -1,8 +1,5 @@
 #include "string.h"
-
-static char *strtok_str_ptr;
-static int strtok_idx = 0;
-static int strtok_len = -1;
+#include "mem.h"
 
 int strcmp(const char *str1, const char *str2)
 {
@@ -61,37 +58,52 @@ uint32_t str2u32(char *str, int size)
     return ret;
 }
 
-void strcpy(char *dst, char *src)
+void strcpy(char *dst, const char *src)
 {
-    volatile char *d = dst, *s = src;
+    strncpy(dst, src, ~0);
+}
 
-    while (*s != '\0')
-        *d++ = *s++;
+void strncpy(char *dst, const char *src, size_t count)
+{
+    volatile char *d = dst;
+    volatile const char *s = src;
+
+    for (int i = 0; i < count && *s != '\0'; i++, d++, s++)
+        *d = *s;
+
     *d = '\0';
 }
 
-char* strtok(char *str, char *delim)
+char* strtok_r(char *str, char *delim, struct strtok_ctx **ctx_ptr)
 {
+    struct strtok_ctx *ctx;
+
     // Initialize
     if (str != NULL)
     {
-        strtok_str_ptr = str;
-        strtok_idx = 0;
-        strtok_len = strlen(str) + 1;
-    }
-        
-    for (int i = strtok_idx; i < strtok_len; i++)
+        if (!(*ctx_ptr = malloc(sizeof(struct strtok_ctx))))
+            return NULL;
+
+        ctx = *ctx_ptr;
+        strcpy(ctx->strtok_str, str);
+        ctx->strtok_idx = 0;
+        ctx->strtok_len = strlen(str) + 1;
+    } 
+    else 
+        ctx = *ctx_ptr;
+
+    for (int i = ctx->strtok_idx; i < ctx->strtok_len; i++)
     {
         for (int j = 0; j <= strlen(delim); j++)
         {
-            if (strtok_str_ptr[i] == delim[j])
+            if (ctx->strtok_str[i] == delim[j])
             {
-                int idx = strtok_idx;
+                int idx = ctx->strtok_idx;
 
-                strtok_str_ptr[i] = '\0';
-                strtok_idx = i + 1;
+                ctx->strtok_str[i] = '\0';
+                ctx->strtok_idx = i + 1;
 
-                return &strtok_str_ptr[idx];
+                return &ctx->strtok_str[idx];
             }
         }
     }

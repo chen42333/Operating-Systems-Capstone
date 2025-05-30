@@ -1,7 +1,7 @@
 #include "ring_buf.h"
 #include "interrupt.h"
 
-void ring_buf_produce(struct ring_buf *rb, void *data, enum buf_type type)
+void ring_buf_produce(struct ring_buf *rb, void *data, buf_type type)
 {    
     while (ring_buf_full(rb)) ;
 
@@ -27,7 +27,7 @@ void ring_buf_produce(struct ring_buf *rb, void *data, enum buf_type type)
     enable_int();
 }
 
-void ring_buf_consume(struct ring_buf *rb, void *ret, enum buf_type type)
+void ring_buf_consume(struct ring_buf *rb, void *ret, buf_type type)
 {
     while (ring_buf_empty(rb)) ;
 

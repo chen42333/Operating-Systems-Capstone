@@ -105,7 +105,7 @@ void init_ttbr(struct pcb_t *pcb)
     pcb->ttbr = v2p_trans_kernel(pgd_addr);
 }
 
-void free_page_table(void *table_addr, enum page_table_lv addr_type)
+void free_page_table(void *table_addr, page_table_lv addr_type)
 {
     void *v_table_addr = p2v_trans_kernel(table_addr);
 
@@ -121,7 +121,7 @@ void free_page_table(void *table_addr, enum page_table_lv addr_type)
     free(v_table_addr);
 }
 
-void page_table_fork(void *dst_table_addr, void *src_table_addr, enum page_table_lv addr_type)
+void page_table_fork(void *dst_table_addr, void *src_table_addr, page_table_lv addr_type)
 {
     void *v_src_table_addr = p2v_trans_kernel(src_table_addr);
     void *v_dst_table_addr = p2v_trans_kernel(dst_table_addr);

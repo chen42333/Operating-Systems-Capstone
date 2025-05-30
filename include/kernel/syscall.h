@@ -11,7 +11,7 @@
 #define ELR_EL1 regs[32]
 #define SPSR_EL1 regs[33]
 
-enum syscall
+typedef enum syscall
 {
     GET_PID = 0,
     UART_READ = 1,
@@ -25,7 +25,7 @@ enum syscall
     SIGNAL_KILL = 9,
     MMAP = 10,
     SIGRET = 11
-};
+} syscall;
 
 struct trap_frame
 {

@@ -21,6 +21,8 @@ void _free();
 void foo(void *args);
 void fork_test();
 
+struct strtok_ctx *ctx_shell;
+
 int main(void *_dtb_addr)
 {
     char cmd[STRLEN], *arg0;
@@ -54,7 +56,7 @@ int main(void *_dtb_addr)
     {
         printf("# ");
         uart_read_string(cmd, STRLEN);
-        arg0 = strtok(cmd, " ");
+        arg0 = strtok_r(cmd, " ", &ctx_shell);
         if (!strcmp("help", arg0))
             printf("help\t: print this help menu\r\n"
                     "hello\t: print Hello World!\r\n"
@@ -82,7 +84,7 @@ int main(void *_dtb_addr)
             ls();
         else if (!strcmp("cat", arg0))
         {
-            if (cat(strtok(NULL, "")) < 0)
+            if (cat(strtok_r(NULL, "", &ctx_shell)) < 0)
                 printf("File not found\r\n");
         }
         else if (!strcmp("memAlloc", arg0))
@@ -92,7 +94,7 @@ int main(void *_dtb_addr)
             pid_t pid = fork();
 
             if (pid == 0)
-                exec(strtok(NULL, ""), NULL);
+                exec(strtok_r(NULL, "", &ctx_shell), NULL);
             else
                 wait(PROC, pid);
         }
@@ -121,6 +123,8 @@ int main(void *_dtb_addr)
             ps();
         else
             printf("Invalid command\r\n");
+
+        free(ctx_shell);
     }
 
     free_init_pcb();
@@ -129,7 +133,7 @@ int main(void *_dtb_addr)
 
 void mem_alloc()
 {
-    char *sz = strtok(NULL, "");
+    char *sz = strtok_r(NULL, "", &ctx_shell);
     size_t size;
     void *data;
 
@@ -158,7 +162,7 @@ void mem_alloc()
 
 void page_alloc()
 {
-    char *sz = strtok(NULL, "");
+    char *sz = strtok_r(NULL, "", &ctx_shell);
     size_t size;
     void *data;
 
@@ -187,7 +191,7 @@ void page_alloc()
 
 void page_free()
 {
-    char *str = strtok(NULL, "");
+    char *str = strtok_r(NULL, "", &ctx_shell);
     void *ptr;
 
     if (str == NULL)
@@ -212,7 +216,7 @@ void page_free()
 
 void _malloc()
 {
-    char *sz = strtok(NULL, "");
+    char *sz = strtok_r(NULL, "", &ctx_shell);
     size_t size;
     void *data;
 
@@ -241,7 +245,7 @@ void _malloc()
 
 void _free()
 {
-    char *str = strtok(NULL, "");
+    char *str = strtok_r(NULL, "", &ctx_shell);
     void *ptr;
 
     if (str == NULL)
