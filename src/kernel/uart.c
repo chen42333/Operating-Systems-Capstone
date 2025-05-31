@@ -69,7 +69,7 @@ size_t uart_write(const char buf[], size_t size)
     size_t i;
 
     if (ring_buf_remain_e(&w_buf) < size)
-        wait(WRITE, size);
+        wait(W, size);
 
     for (i = 0; i < size; i++)
         uart_write_char(buf[i]);
@@ -130,7 +130,7 @@ size_t uart_read(char buf[], size_t size)
     enable_read_int();
 
     if (ring_buf_num_e(&r_buf) < size)
-        wait(READ, size);
+        wait(R, size);
 
     for (i = 0; i < size; i++)
     {

@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "list.h"
 #include "signal.h"
+#include "vfs.h"
 
 #define MAX_PROC 1024
 #define STACK_EL0_SIZE (1ULL << 14)
@@ -26,7 +27,7 @@
 typedef int pid_t;
 
 typedef enum stat { RUN, READY, WAIT, DEAD } stat;
-typedef enum event { PROC, READ, WRITE, _LAST } event;
+typedef enum event { PROC, R, W, _LAST } event;
 typedef enum sec { TEXT, HEAP, STACK, DEVICE } sec;
 
 struct pcb_t
@@ -49,6 +50,9 @@ struct pcb_t
     struct list signal_queue;
     struct list sections;
     void *ttbr;
+    struct vnode *cur_dir;
+    struct file *fd_table[MAX_NUM_FD];
+    uint16_t fd_bitmap;
 };
 
 struct section

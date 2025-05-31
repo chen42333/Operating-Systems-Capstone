@@ -12,6 +12,7 @@
 #include "syscall.h"
 #include "vmem.h"
 #include "tmpfs.h"
+#include "file.h"
 
 /* Test functions */
 void mem_alloc();
@@ -52,6 +53,7 @@ int main(void *_dtb_addr)
 
     vfs_init();
     tmpfs_init();
+    initramfs_init();
 
     init_pcb();
     thread_create(idle, NULL);
@@ -66,7 +68,7 @@ int main(void *_dtb_addr)
                     "hello\t: print Hello World!\r\n"
                     "mailbox\t: print hardware's information\r\n"
                     "reboot\t: reboot the device\r\n"
-                    "ls\t: list all the files in ramdisk\r\n"
+                    "ls <dir>\t: list all the files under <dir>\r\n"
                     "cat <filename>\t: show the content of <filename>\r\n"
                     "memAlloc <size>\t: allocate <size> bytes data using simple allocator\r\n"
                     "ldProg <filename>: execute <filename> in the ramdisk\r\n"
@@ -85,7 +87,7 @@ int main(void *_dtb_addr)
         else if (!strcmp("reboot", arg0))
             reset(1);
         else if (!strcmp("ls", arg0))
-            ls();
+            ls(strtok_r(NULL, "", &ctx_shell));
         else if (!strcmp("cat", arg0))
         {
             if (cat(strtok_r(NULL, "", &ctx_shell)) < 0)

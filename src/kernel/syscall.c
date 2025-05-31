@@ -3,6 +3,7 @@
 #include "mailbox.h"
 #include "ramdisk.h"
 #include "vmem.h"
+#include "file.h"
 
 void syscall_entry(struct trap_frame *frame)
 {
@@ -41,8 +42,30 @@ void syscall_entry(struct trap_frame *frame)
             signal_kill((int)frame->arg(0), (int)frame->arg(1));
             break;
         case MMAP:
-        frame->RET = (size_t)mmap((void*)frame->arg(0), (size_t)frame->arg(1), (int)frame->arg(2), 
+            frame->RET = (size_t)mmap((void*)frame->arg(0), (size_t)frame->arg(1), (int)frame->arg(2), 
                                     (int)frame->arg(3), (int)frame->arg(4), (int)frame->arg(5));
+            break;
+        case OPEN:
+            frame->RET = open((const char*)frame->arg(0), (int)frame->arg(1));
+            break;
+        case CLOSE:
+            frame->RET = close((int)frame->arg(0));
+            break;
+        case WRITE:
+            frame->RET = write((int)frame->arg(0), (const void*)frame->arg(1), (unsigned long)frame->arg(2));
+            break;
+        case READ:
+            frame->RET = read((int)frame->arg(0), (void*)frame->arg(1), (unsigned long)frame->arg(2));
+            break;
+        case MKDIR:
+            frame->RET = mkdir((const char*)frame->arg(0), (unsigned int)frame->arg(1));
+            break;
+        case MOUNT:
+            frame->RET = mount((const char*)frame->arg(0), (const char*)frame->arg(1), 
+                            (const char*)frame->arg(2), (unsigned long)frame->arg(3), (const void*)frame->arg(4));
+            break;
+        case CHDIR:
+            frame->RET = chdir((const char*)frame->arg(0));
             break;
         case SIGRET:
             sigreturn();
@@ -137,6 +160,16 @@ int fork()
 
     new_pcb = pcb_table[new_pid];
     new_pcb->el = pcb->el;
+    new_pcb->cur_dir = pcb->cur_dir;
+    for (int i = 0; i < MAX_NUM_FD; i++)
+    {
+        if (pcb->fd_table[i])
+        {
+            new_pcb->fd_table[i] = pcb->fd_table[i];
+            pcb->fd_table[i]->ref_count++;
+        }
+    }
+    new_pcb->fd_bitmap = pcb->fd_bitmap;
     if (pcb->el == 0)
     {
         add_ref_sections(&pcb->sections, pcb->ttbr);

@@ -5,87 +5,12 @@
 #include "string.h"
 #include "printf.h"
 #include "mem.h"
+#include "vfs.h"
+#include "tmpfs.h"
 
 void *ramdisk_saddr;
 void *ramdisk_eaddr;
 static int dtb_str_idx = 0;
-
-void ls()
-{
-    void *addr = ramdisk_saddr;
-
-    while (true)
-    {
-        struct cpio_record *record = (struct cpio_record*)addr;
-        uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
-        uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
-
-        if (addr >= ramdisk_eaddr)
-        {
-            err("No TRAILER record\r\n");
-            break;
-        }
-
-        if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
-        {
-            err("Invalid .cpio record\r\n");
-            continue;
-        }
-
-        if (!strcmp("TRAILER!!!", record->payload))
-            break;
-        
-        if (!strcmp(".", record->payload) || strncmp("./", record->payload, 2))
-            printf("%s\r\n", record->payload);
-        else
-            printf("%s\r\n", record->payload + 2);
-
-        addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
-        addr += ((file_size + 3) & ~3);
-    }
-}
-
-int cat(char *filename)
-{
-    void *addr = ramdisk_saddr;
-
-    if (filename == NULL)
-        return -1;
-        
-    while (true)
-    {
-        struct cpio_record *record = (struct cpio_record*)addr;
-        uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
-        uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
-
-        if (addr >= ramdisk_eaddr)
-        {
-            err("No TRAILER record\r\n");
-            return -1;
-        }
-
-        if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
-        {
-            err("Invalid .cpio record\r\n");
-            continue;
-        }
-
-        if (!strcmp("TRAILER!!!", record->payload))
-            return -1;
-
-        if ((!strncmp("./", record->payload, 2) && !strcmp(filename, record->payload + 2)) || (strncmp("./", record->payload, 2) && !strcmp(filename, record->payload)) )
-        {
-            int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
-
-            printf("%s\r\n", record->payload + offset);
-
-            return 0;
-        }
-
-        addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
-        addr += ((file_size + 3) & ~3);
-    }
-}
 
 static bool initramfs_process_node(void *p, char *name, char *path, void **addr_ptr)
 {
@@ -144,10 +69,53 @@ bool initramfs_end(void *p, char *name)
     return initramfs_process_node(p, name, path, &ramdisk_eaddr);
 }
 
-void* load_prog(char *filename, size_t *prog_size)
+static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t path_size, uint32_t file_size)
 {
-    void *prog_addr;
+    struct strtok_ctx *ctx;
+    char *component = strtok_r(path, "/", &ctx);
+    struct vnode *cur, *parent = NULL;
+    bool skip = false;
+
+    if (strcmp(".", component))
+        skip = true;
+
+    cur = mnt->root;
+    parent = cur->parent;
+
+    while (skip || (component = strtok_r(NULL, "/", &ctx)) != NULL)
+    {
+        if (skip)
+            skip = false;
+            
+        parent = cur;
+        mnt->root->v_ops->lookup(parent, &cur, component);
+        if (!cur)
+        {
+            char *tmp;
+            if ((tmp = strtok_r(NULL, "/", &ctx)) != NULL) // Directory
+            {
+                mnt->root->v_ops->mkdir(parent, &cur, component);
+
+                skip = true;
+                component = tmp;
+            } else { // File
+                int content_offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
+
+                mnt->root->v_ops->create(parent, &cur, component);
+                cur->content = path + content_offset;
+                cur->file_size = file_size;
+                break;
+            }
+        }
+    }
+
+    free(ctx);
+}
+
+static void initramfs_parse_cpio(struct mount *mnt)
+{
     void *addr = ramdisk_saddr;
+
     while (true)
     {
         struct cpio_record *record = (struct cpio_record*)addr;
@@ -157,31 +125,74 @@ void* load_prog(char *filename, size_t *prog_size)
         if (addr >= ramdisk_eaddr)
         {
             err("No TRAILER record\r\n");
-            return NULL;
+            break;
         }
 
         if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
         {
             err("Invalid .cpio record\r\n");
-            continue;
+            goto cont;
         }
 
         if (!strcmp("TRAILER!!!", record->payload))
-            return NULL;
+            break;
 
-        if ((!strncmp("./", record->payload, 2) && !strcmp(filename, record->payload + 2)) || (strncmp("./", record->payload, 2) && !strcmp(filename, record->payload)) )
-        {
-            int offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
-            prog_addr = malloc((file_size / PAGE_SIZE + (file_size % PAGE_SIZE > 0)) * PAGE_SIZE);
-            *prog_size = file_size;
+        if (!strcmp(".", record->payload) || !strcmp("..", record->payload))
+            goto cont;
 
-            for (int i = 0; i < file_size; i++)
-                *((char*)prog_addr + i) = *(record->payload + offset + i);
-
-            return prog_addr;
-        }
-
+        initramfs_create_recursive(mnt, record->payload, path_size, file_size);
+        
+cont:
         addr += ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3);
         addr += ((file_size + 3) & ~3);
     }
+}
+
+static int initramfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component)
+{
+    if (!(mount->root->v_ops = malloc(sizeof(struct vnode_operations))))
+        return -1;
+    if (!(mount->root->f_ops = malloc(sizeof(struct file_operations))))
+    {    
+        free(mount->root->v_ops);
+        return -1;
+    }
+
+    if (tmpfs_init_vnode(NULL, mount->root, DIR, component))
+        return -1;
+    
+    if (dir_node)
+        list_push(&dir_node->children, mount->root);
+    mount->root->parent = dir_node;
+
+    mount->root->v_ops->create = tmpfs_create;
+    mount->root->v_ops->lookup = tmpfs_lookup;
+    mount->root->v_ops->mkdir = tmpfs_mkdir;
+
+    mount->root->f_ops->write = NULL;
+    mount->root->f_ops->read = tmpfs_read;
+    mount->root->f_ops->open = tmpfs_open;
+    mount->root->f_ops->close = tmpfs_close;
+    mount->root->f_ops->lseek64 = tmpfs_lseek64;
+
+    mount->root->mount = mount;
+
+    initramfs_parse_cpio(mount);
+
+    return 0;
+}
+
+void initramfs_init()
+{
+    struct vnode *node;
+    struct filesystem *initramfs = malloc(sizeof(struct filesystem));
+
+    if (!initramfs)
+        return;
+    initramfs->name = "initramfs";
+    initramfs->setup_mount = &initramfs_setup_mount;
+
+    register_filesystem(initramfs);
+    vfs_mkdir(MOUNT_POINT, &node);
+    vfs_mount(MOUNT_POINT, initramfs->name, MS_RDONLY);
 }

@@ -37,7 +37,7 @@ DEPS = $(OBJS:.o=.d)
 LDFILE = $(SRC_DIR)/$(TARGET)/linker.ld
 PROGS = *.elf *.img
 PROGS += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
-PROGS += $(shell find $(RAMDISK_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
+# PROGS += $(shell find $(RAMDISK_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
 RAMDISK_DIR = ./rootfs
 RAMDISK = initramfs.cpio
 RAMDISK_FILES = $(shell find $(RAMDISK_DIR) -type f ! -name "*.img" )

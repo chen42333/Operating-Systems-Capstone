@@ -63,6 +63,9 @@ void init_pcb()
     pcb->sp = (uintptr_t)_estack;
     asm volatile ("mov %0, x29" : "=r"(pcb->fp));
     pcb->lr = (uintptr_t)exit;
+    pcb->cur_dir = rootfs->root;
+    memset(pcb->fd_table, 0, sizeof(pcb->fd_table));
+    pcb->fd_bitmap = 0;
     for (int i = 0; i < _NSIG; i++)
         pcb->sig_handler[i] = SIG_DFL;
 
@@ -104,6 +107,9 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->sp = (uint64_t)pcb->stack[1];
     pcb->fp = (uint64_t)pcb->stack[1];
     pcb->lr = (uintptr_t)exit;
+    pcb->cur_dir = rootfs->root;
+    pcb->fd_bitmap = 0;
+    memset(pcb->fd_table, 0, sizeof(pcb->fd_table));
     for (int i = 0; i < _NSIG; i++)
         pcb->sig_handler[i] = SIG_DFL;
 

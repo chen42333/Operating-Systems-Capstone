@@ -317,9 +317,9 @@ seg_fault:
         exit();
         disable_int();
     } else {
-        enable_int();
-        printf("ESR: 0x%lx\r\nEC, 0x%lx\r\n", esr, ec);
-        disable_int();
+        // enable_int();
+        // printf("ESR: 0x%lx\r\nEC: 0x%lx\r\n", esr, ec);
+        // disable_int();
     }
 }
 
@@ -352,9 +352,9 @@ void tx_int_task(void *data)
 {
     set8(AUX_MU_IO_REG, *(char*)data);
 
-    if (!list_empty(&wait_queue[WRITE]) && 
-    ring_buf_remain_e(&w_buf) >= ((struct pcb_t*)list_top(&wait_queue[WRITE]))->wait_data)
-        wait_to_ready(list_pop(&wait_queue[WRITE]));
+    if (!list_empty(&wait_queue[W]) && 
+    ring_buf_remain_e(&w_buf) >= ((struct pcb_t*)list_top(&wait_queue[W]))->wait_data)
+        wait_to_ready(list_pop(&wait_queue[W]));
     
     if (!ring_buf_empty(&w_buf))
         enable_write_int();
@@ -379,9 +379,9 @@ void rx_int_task(void *data)
 #endif
     ring_buf_produce(&r_buf, (char*)data, CHAR);
 
-    if (!list_empty(&wait_queue[READ]) && 
-    ring_buf_num_e(&r_buf) >= ((struct pcb_t*)list_top(&wait_queue[READ]))->wait_data)
-        wait_to_ready(list_pop(&wait_queue[READ]));
+    if (!list_empty(&wait_queue[R]) && 
+    ring_buf_num_e(&r_buf) >= ((struct pcb_t*)list_top(&wait_queue[R]))->wait_data)
+        wait_to_ready(list_pop(&wait_queue[R]));
 
     enable_read_int();
 }

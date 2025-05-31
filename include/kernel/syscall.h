@@ -24,7 +24,14 @@ typedef enum syscall
     SIGNAL = 8, 
     SIGNAL_KILL = 9,
     MMAP = 10,
-    SIGRET = 11
+    OPEN = 11,
+    CLOSE = 12,
+    WRITE = 13,
+    READ = 14,
+    MKDIR = 15,
+    MOUNT = 16,
+    CHDIR = 17,
+    SIGRET = 18
 } syscall;
 
 struct trap_frame

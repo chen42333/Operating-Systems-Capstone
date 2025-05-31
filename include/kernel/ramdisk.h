@@ -6,6 +6,8 @@
 #define INITRD_START_DTB_PATH "/chosen/linux,initrd-start"
 #define INITRD_END_DTB_PATH "/chosen/linux,initrd-end"
 
+#define MOUNT_POINT "/initramfs"
+
 struct cpio_newc_header {
     char    c_magic[6];
     char    c_ino[8];
@@ -29,10 +31,8 @@ struct cpio_record
     char payload[];
 };
 
-void ls();
-int cat(char *filename);
 bool initramfs_start(void *p, char *name);
 bool initramfs_end(void *p, char *name);
-void* load_prog(char *filename, size_t *prog_size);
+void initramfs_init();
 
 #endif
