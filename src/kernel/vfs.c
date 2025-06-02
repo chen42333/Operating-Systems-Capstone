@@ -148,7 +148,7 @@ int vfs_open(const char* pathname, int flags, struct file **target)
     if (!node)
     {
         if (flags & O_CREAT) // Create the node and then find again
-            vfs_create(pathname, &node);
+            vfs_create(pathname, &node, FILE);
         else {
             err("File not found\r\n");
             return -1;
@@ -160,10 +160,10 @@ int vfs_open(const char* pathname, int flags, struct file **target)
 
 int vfs_close(struct file* file) 
 {
-    return file->vnode->f_ops->close(file);
+    return file->f_ops->close(file);
 }
 
-int vfs_write(struct file* file, const void* buf, size_t len) 
+long vfs_write(struct file* file, const void* buf, size_t len) 
 {
     if (file->vnode->mount->flags & MS_RDONLY)
     {
@@ -171,17 +171,17 @@ int vfs_write(struct file* file, const void* buf, size_t len)
         return -1;
     }
 
-    return file->vnode->f_ops->write(file, buf, len);
+    return file->f_ops->write(file, buf, len);
 }
 
-int vfs_read(struct file* file, void* buf, size_t len) 
+long vfs_read(struct file* file, void* buf, size_t len) 
 {
-    return file->vnode->f_ops->read(file, buf, len);
+    return file->f_ops->read(file, buf, len);
 }
 
 int vfs_lseek64(struct file* file, long offset, int whence)
 {
-    return file->vnode->f_ops->lseek64(file, offset, whence);
+    return file->f_ops->lseek64(file, offset, whence);
 }
 
 int vfs_mkdir(const char* pathname, struct vnode**target)
@@ -205,7 +205,7 @@ int vfs_mkdir(const char* pathname, struct vnode**target)
     return 0;
 }
 
-int vfs_create(const char* pathname, struct vnode **target)
+int vfs_create(const char* pathname, struct vnode **target, file_type type)
 {
     struct mount *mnt;
     struct vnode *node, *parent_vnode;
@@ -220,7 +220,7 @@ int vfs_create(const char* pathname, struct vnode **target)
     }
     mnt = parent_vnode->mount;
 
-    if (mnt->root->v_ops->create(parent_vnode, target, component) < 0)
+    if (mnt->root->v_ops->create(parent_vnode, target, component, type) < 0)
         return -1;
 
     return 0;

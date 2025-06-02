@@ -13,6 +13,7 @@
 #include "vmem.h"
 #include "tmpfs.h"
 #include "file.h"
+#include "dev.h"
 
 /* Test functions */
 void mem_alloc();
@@ -54,6 +55,7 @@ int main(void *_dtb_addr)
     vfs_init();
     tmpfs_init();
     initramfs_init();
+    device_file_init();
 
     init_pcb();
     thread_create(idle, NULL);

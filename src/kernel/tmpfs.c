@@ -11,7 +11,7 @@ static bool vfs_tree_child(void *ptr, void *data)
     return strcmp(node->name, (char*)data) == 0;
 }
 
-int tmpfs_write(struct file* file, const void* buf, size_t len)
+long tmpfs_write(struct file* file, const void* buf, size_t len)
 {
     size_t write_sz = (file->f_pos + len > MAX_FILE_SZ) ? MAX_FILE_SZ - file->f_pos : len;
 
@@ -24,7 +24,7 @@ int tmpfs_write(struct file* file, const void* buf, size_t len)
     return write_sz;
 }
 
-int tmpfs_read(struct file* file, void* buf, size_t len)
+long tmpfs_read(struct file* file, void* buf, size_t len)
 {
     void *s = file->vnode->content + file->f_pos;
     size_t read_sz = (len < file->vnode->file_size - file->f_pos) ? len : file->vnode->file_size - file->f_pos;
@@ -130,11 +130,11 @@ int tmpfs_init_vnode(struct vnode* dir_node, struct vnode *node, file_type type,
     return 0;
 }
 
-int tmpfs_create(struct vnode* dir_node, struct vnode** target, const char* component_name)
+int tmpfs_create(struct vnode* dir_node, struct vnode** target, const char* component_name, file_type type)
 {
     *target = malloc(sizeof(struct vnode));
 
-    return tmpfs_init_vnode(dir_node, *target, FILE, component_name);
+    return tmpfs_init_vnode(dir_node, *target, type, component_name);
 }
 
 int tmpfs_mkdir(struct vnode* dir_node, struct vnode** target, const char* component_name)

@@ -3,6 +3,7 @@
 #include "syscall.h"
 #include "signal.h"
 #include "vmem.h"
+#include "dev.h"
 
 pid_t last_pid = 0;
 struct list ready_queue, dead_queue, wait_queue[_LAST];
@@ -48,6 +49,21 @@ void ps()
     printf("\r\n");
 }
 
+static int init_uart_fd(struct file *fd_table[], uint16_t *fd_bitmap)
+{
+    struct file *f;
+
+    if (vfs_open(DEV_UART, O_RDWR, &f) < 0)
+        return -1;
+
+    fd_table[STDIN] = f;
+    fd_table[STDOUT] = f;
+    fd_table[STDERR] = f;
+    *fd_bitmap = (1ULL << STDIN) | (1ULL << STDOUT) | (1ULL << STDERR);
+
+    return 0;
+}
+
 void init_pcb()
 {
     struct pcb_t *pcb;
@@ -66,6 +82,7 @@ void init_pcb()
     pcb->cur_dir = rootfs->root;
     memset(pcb->fd_table, 0, sizeof(pcb->fd_table));
     pcb->fd_bitmap = 0;
+    init_uart_fd(pcb->fd_table, &pcb->fd_bitmap);
     for (int i = 0; i < _NSIG; i++)
         pcb->sig_handler[i] = SIG_DFL;
 
@@ -109,7 +126,7 @@ pid_t thread_create(void (*func)(void *args), void *args)
     pcb->lr = (uintptr_t)exit;
     pcb->cur_dir = rootfs->root;
     pcb->fd_bitmap = 0;
-    memset(pcb->fd_table, 0, sizeof(pcb->fd_table));
+    memset(pcb->fd_table, 0, sizeof(pcb->fd_table)); // STDIN, STDOUT, STDERR will only be initialized at INIT
     for (int i = 0; i < _NSIG; i++)
         pcb->sig_handler[i] = SIG_DFL;
 

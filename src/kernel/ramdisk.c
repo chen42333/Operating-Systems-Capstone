@@ -101,7 +101,7 @@ static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t p
             } else { // File
                 int content_offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
 
-                mnt->root->v_ops->create(parent, &cur, component);
+                mnt->root->v_ops->create(parent, &cur, component, FILE);
                 cur->content = path + content_offset;
                 cur->file_size = file_size;
                 break;
