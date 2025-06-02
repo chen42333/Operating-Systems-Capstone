@@ -30,6 +30,9 @@ int main(void *_dtb_addr)
 {
     char cmd[STRLEN], *arg0;
 
+    // get_current() will get NULL until initializtion finish (init_pcb)
+    set_current(NULL);
+
     uart_init();
     clear_read_fifo();
     clear_write_fifo();
@@ -59,7 +62,7 @@ int main(void *_dtb_addr)
 
     init_pcb();
     thread_create(idle, NULL);
-    
+
     while (true)
     {
         printf("# ");

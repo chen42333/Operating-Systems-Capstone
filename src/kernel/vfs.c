@@ -165,7 +165,7 @@ int vfs_close(struct file* file)
 
 long vfs_write(struct file* file, const void* buf, size_t len) 
 {
-    if (file->vnode->mount->flags & MS_RDONLY)
+    if (file->vnode->mount->flags & MS_RDONLY || file->flags & O_RDONLY)
     {
         err("Permission denied\r\n");
         return -1;
@@ -176,12 +176,23 @@ long vfs_write(struct file* file, const void* buf, size_t len)
 
 long vfs_read(struct file* file, void* buf, size_t len) 
 {
+    if (file->flags & O_WRONLY)
+    {
+        err("Permission denied\r\n");
+        return -1;
+    }
+
     return file->f_ops->read(file, buf, len);
 }
 
-int vfs_lseek64(struct file* file, long offset, int whence)
+int vfs_lseek64(struct file *file, long offset, int whence)
 {
     return file->f_ops->lseek64(file, offset, whence);
+}
+
+int vfs_ioctl(struct file *file, unsigned long request, void *data)
+{
+    return file->f_ops->ioctl(file, request, data);
 }
 
 int vfs_mkdir(const char* pathname, struct vnode**target)

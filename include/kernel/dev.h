@@ -18,6 +18,7 @@ typedef struct device
 } device;
 
 int mknod(const char *pathname, mode_t mode, dev_t dev);
+int ioctl(int fd, unsigned long request, void *data);
 void device_file_init();
 
 #endif

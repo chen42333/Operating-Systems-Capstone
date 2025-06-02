@@ -88,6 +88,13 @@ int chdir(const char *path)
     return 0;
 }
 
+long lseek64(int fd, long offset, int whence)
+{
+    struct file *f = get_current()->fd_table[fd];
+
+    return vfs_lseek64(f, offset, whence);
+}
+
 void ls(char *dirname)
 {
     struct vnode *node, *parent_node;

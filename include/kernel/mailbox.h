@@ -20,7 +20,21 @@
 #define TAG_REQUEST_CODE 0x00000000
 #define END_TAG 0x00000000
 
+#define MBOX_CH_PROP 8
+
+struct framebuffer_info 
+{
+    unsigned int width;
+    unsigned int height;
+    unsigned int pitch;
+    unsigned int isrgb;
+};
+
+extern void *fb_addr;
+extern struct framebuffer_info fb_info;
+
 int mbox_call(unsigned char channel, uint32_t *mailbox); // Virtual
 void mailbox_info();
+void get_fb(size_t *size);
 
 #endif

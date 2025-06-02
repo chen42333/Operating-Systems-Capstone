@@ -10,6 +10,7 @@ long read(int fd, void *buf, unsigned long count);
 int mkdir(const char *pathname, unsigned mode);
 int mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
 int chdir(const char *path);
+long lseek64(int fd, long offset, int whence);
 
 void ls(char *dirname);
 int cat(char *filename);

@@ -75,6 +75,7 @@ struct file_operations
     int (*open)(struct vnode* file_node, int flags, struct file **target);
     int (*close)(struct file* file);
     long (*lseek64)(struct file* file, long offset, int whence);
+    int (*ioctl)(struct file* file, unsigned long request, void *data);
 };
   
 struct vnode_operations 
@@ -127,6 +128,7 @@ int vfs_close(struct file* file);
 long vfs_write(struct file* file, const void* buf, size_t len);
 long vfs_read(struct file* file, void* buf, size_t len);
 int vfs_lseek64(struct file* file, long offset, int whence);
+int vfs_ioctl(struct file* file, unsigned long request, void *data);
 int vfs_mkdir(const char* pathname, struct vnode **target);
 int vfs_create(const char* pathname, struct vnode **target, file_type type);
 int vfs_lookup(const char* pathname, struct vnode **target);

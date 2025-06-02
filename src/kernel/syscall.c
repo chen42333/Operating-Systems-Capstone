@@ -4,6 +4,7 @@
 #include "ramdisk.h"
 #include "vmem.h"
 #include "file.h"
+#include "dev.h"
 
 void syscall_entry(struct trap_frame *frame)
 {
@@ -66,6 +67,12 @@ void syscall_entry(struct trap_frame *frame)
             break;
         case CHDIR:
             frame->RET = chdir((const char*)frame->arg(0));
+            break;
+        case LSEEK:
+            frame->RET = lseek64((int)frame->arg(0), (long)frame->arg(1), (int)frame->arg(2));
+            break;
+        case IOCTL:
+            frame->RET = ioctl((int)frame->arg(0), (unsigned long)frame->arg(1), (void*)frame->arg(2));
             break;
         case SIGRET:
             sigreturn();

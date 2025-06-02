@@ -31,7 +31,9 @@ typedef enum syscall
     MKDIR = 15,
     MOUNT = 16,
     CHDIR = 17,
-    SIGRET = 18
+    LSEEK = 18,
+    IOCTL = 19,
+    SIGRET = 20
 } syscall;
 
 struct trap_frame

@@ -170,6 +170,7 @@ int tmpfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *
     mount->root->f_ops->open = tmpfs_open;
     mount->root->f_ops->close = tmpfs_close;
     mount->root->f_ops->lseek64 = tmpfs_lseek64;
+    mount->root->f_ops->ioctl = NULL;
 
     mount->root->mount = mount;
 
