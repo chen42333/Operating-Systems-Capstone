@@ -11,7 +11,20 @@ static long _uart_write(struct file *file, const void *buf, size_t len)
     return uart_write(buf, len);
 }
 
-const device dev_list[] = { {"/dev/uart", 0, _uart_read, _uart_write} };
+static void uart_driver(struct vnode *node)
+{
+    node->f_ops->read = _uart_read;
+    node->f_ops->write = _uart_write;
+}
+
+static void framebuffer_driver(struct vnode *node)
+{
+    
+}
+
+const device dev_list[] = { 
+    {"/dev/uart", 0, uart_driver}, 
+    {"/dev/framebuffer", 1, framebuffer_driver}};
 
 int mknod(const char *pathname, mode_t mode, dev_t dev)
 {
@@ -27,13 +40,9 @@ int mknod(const char *pathname, mode_t mode, dev_t dev)
         return -1;
     }
 
-    f_ops->read = dev_list[dev].read;
-    f_ops->write = dev_list[dev].write;
-    f_ops->lseek64 = node->f_ops->lseek64;
-    f_ops->open = node->f_ops->open;
-    f_ops->close = node->f_ops->close;
-
+    memcpy(f_ops, node->f_ops, sizeof(struct file_operations));
     node->f_ops = f_ops;
+    dev_list[dev].driver(node);
 
     return 0;
 }

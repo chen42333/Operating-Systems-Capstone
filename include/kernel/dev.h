@@ -14,8 +14,7 @@ typedef struct device
 {
     char *pathname;
     dev_t dev_number;
-    long (*read)(struct file* file, void* buf, size_t len);
-    long (*write)(struct file* file, const void* buf, size_t len);
+    void (*driver)(struct vnode *node);
 } device;
 
 int mknod(const char *pathname, mode_t mode, dev_t dev);
