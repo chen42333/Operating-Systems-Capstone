@@ -20,7 +20,7 @@ void strcpy(char *dst, const char *src);
 void strncpy(char *dst, const char *src, size_t count);
 char* strtok_r(char *str, char *delim, struct strtok_ctx **ctx_ptr);
 
-inline static uint32_t strlen(char* str)
+inline static uint32_t strlen(char *str)
 {
     uint32_t i;
     for (i = 0; str[i] != '\0'; i++) ;

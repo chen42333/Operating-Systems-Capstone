@@ -90,7 +90,7 @@ pid_t getpid()
     return get_current()->pid;
 }
 
-int exec(const char* name, char *const argv[])
+int exec(const char *name, char *const argv[])
 {
     struct pcb_t *pcb = get_current();
     void *prog_addr;

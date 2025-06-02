@@ -192,7 +192,7 @@ void replace_page_entry(void *ttbr0, void *virtual_addr, void *new_addr, bool w_
     *v_entry_ptr |= (size_t)new_addr & TABLE_ADDR_MASK;
 }
 
-void* mmap(void* addr, size_t len, int prot, int flags, int fd, int file_offset)
+void* mmap(void *addr, size_t len, int prot, int flags, int fd, int file_offset)
 {
     struct pcb_t *pcb = get_current();
     void *ttbr;

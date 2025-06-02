@@ -7,7 +7,7 @@ static struct list fs_list;
 
 static bool same_fs_name(void *ptr, void *data)
 {
-    struct filesystem* fs = ptr;
+    struct filesystem *fs = ptr;
     char *fs_name = data;
 
     if (!strcmp(fs->name, fs_name))
@@ -16,7 +16,7 @@ static bool same_fs_name(void *ptr, void *data)
     return false;
 }
 
-int find_parent_vnode(const char* pathname, struct vnode **node, struct vnode **parent_vnode, char *component)
+int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **parent_vnode, char *component)
 {
     struct mount *mnt;
     struct strtok_ctx *ctx;
@@ -76,7 +76,7 @@ void vfs_init()
     memset(&fs_list, 0, sizeof(struct list));
 }
 
-int register_filesystem(struct filesystem* fs) 
+int register_filesystem(struct filesystem *fs) 
 {
     if (list_find(&fs_list, same_fs_name, (void*)fs->name))
     {
@@ -88,9 +88,9 @@ int register_filesystem(struct filesystem* fs)
     return 0;
 }
 
-int vfs_mount(const char* target, const char* filesystem, unsigned flags)
+int vfs_mount(const char *target, const char *filesystem, unsigned flags)
 {
-    struct filesystem* fs = list_find(&fs_list, same_fs_name, (void*)filesystem);
+    struct filesystem *fs = list_find(&fs_list, same_fs_name, (void*)filesystem);
     struct mount *mnt;
     struct vnode *node, *parent_vnode = NULL;
     char component[STRLEN];
@@ -138,7 +138,7 @@ int vfs_mount(const char* target, const char* filesystem, unsigned flags)
     return fs->setup_mount(fs, mnt, parent_vnode, component);
 }
 
-int vfs_open(const char* pathname, int flags, struct file **target) 
+int vfs_open(const char *pathname, int flags, struct file **target) 
 {
     struct vnode *node;
 
@@ -158,12 +158,12 @@ int vfs_open(const char* pathname, int flags, struct file **target)
     return node->f_ops->open(node, flags, target);
 }
 
-int vfs_close(struct file* file) 
+int vfs_close(struct file *file) 
 {
     return file->f_ops->close(file);
 }
 
-long vfs_write(struct file* file, const void* buf, size_t len) 
+long vfs_write(struct file *file, const void *buf, size_t len) 
 {
     if (file->vnode->mount->flags & MS_RDONLY || file->flags & O_RDONLY)
     {
@@ -174,7 +174,7 @@ long vfs_write(struct file* file, const void* buf, size_t len)
     return file->f_ops->write(file, buf, len);
 }
 
-long vfs_read(struct file* file, void* buf, size_t len) 
+long vfs_read(struct file *file, void *buf, size_t len) 
 {
     if (file->flags & O_WRONLY)
     {
@@ -195,7 +195,7 @@ int vfs_ioctl(struct file *file, unsigned long request, void *data)
     return file->f_ops->ioctl(file, request, data);
 }
 
-int vfs_mkdir(const char* pathname, struct vnode**target)
+int vfs_mkdir(const char *pathname, struct vnode**target)
 {
     struct mount *mnt;
     struct vnode *node, *parent_vnode;
@@ -216,7 +216,7 @@ int vfs_mkdir(const char* pathname, struct vnode**target)
     return 0;
 }
 
-int vfs_create(const char* pathname, struct vnode **target, file_type type)
+int vfs_create(const char *pathname, struct vnode **target, file_type type)
 {
     struct mount *mnt;
     struct vnode *node, *parent_vnode;
@@ -237,7 +237,7 @@ int vfs_create(const char* pathname, struct vnode **target, file_type type)
     return 0;
 }
 
-int vfs_lookup(const char* pathname, struct vnode **target)
+int vfs_lookup(const char *pathname, struct vnode **target)
 {
     struct vnode *node, *parent_vnode;
     char component[STRLEN];

@@ -20,7 +20,7 @@ static void uart_driver(struct vnode *node)
     node->f_ops->write = _uart_write;
 }
 
-static int fb_ioctl(struct file* file, unsigned long request, void *data)
+static int fb_ioctl(struct file *file, unsigned long request, void *data)
 {
     switch (request)
     {
@@ -34,7 +34,7 @@ static int fb_ioctl(struct file* file, unsigned long request, void *data)
     return 0;
 }
 
-static long fb_write(struct file* file, const void* buf, size_t len)
+static long fb_write(struct file *file, const void *buf, size_t len)
 {
     size_t write_sz = (file->f_pos + len > file->vnode->file_size) ? 
                         file->vnode->file_size - file->f_pos : len;

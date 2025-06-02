@@ -35,12 +35,12 @@ typedef enum prio {
 void add_timer(void(*callback)(void*), uint64_t duration, void *data);
 void add_task(void(*callback)(void*), prio priority, void *data);
 void timer_int();
-void process_timer(void* data);
-void elasped_time(void* data);
+void process_timer(void *data);
+void elasped_time(void *data);
 void print_msg(void *data);
 void init_timer_queue();
 void exception_entry();
-void process_task(struct task_queue_element* task);
+void process_task(struct task_queue_element *task);
 void tx_int_task(void *data);
 void tx_int();
 void rx_int_task(void *data);

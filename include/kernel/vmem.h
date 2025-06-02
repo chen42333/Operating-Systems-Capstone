@@ -32,6 +32,6 @@ void init_ttbr(struct pcb_t *pcb);
 void free_page_table(void *table_addr, page_table_lv addr_type); // Physical
 void page_table_fork(void *dst_table_addr, void *src_table_addr, page_table_lv addr_type);  // Physical
 void replace_page_entry(void *ttbr0, void *virtual_addr, void *new_addr, bool w_permission);
-void* mmap(void* addr, size_t len, int prot, int flags, int fd, int file_offset);
+void* mmap(void *addr, size_t len, int prot, int flags, int fd, int file_offset);
 
 #endif

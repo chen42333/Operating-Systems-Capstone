@@ -159,7 +159,7 @@ void process_timer(void *data)
     enable_timer_int();
 }
 
-void elasped_time(void* data)
+void elasped_time(void *data)
 {
     uint64_t freq;
 

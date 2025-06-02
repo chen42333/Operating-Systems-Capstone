@@ -45,7 +45,7 @@ extern void exec_prog(void *addr, void *stack, void *ttbr);
 
 void syscall_entry(struct trap_frame *frame);
 pid_t getpid();
-int exec(const char* name, char *const argv[]);
+int exec(const char *name, char *const argv[]);
 int fork();
 void exit();
 void kill(pid_t pid);

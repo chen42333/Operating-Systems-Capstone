@@ -63,33 +63,33 @@ struct file;
 
 struct mount 
 {
-    struct vnode* root;
-    struct filesystem* fs;
+    struct vnode *root;
+    struct filesystem *fs;
     unsigned flags;
 };
   
 struct file_operations 
 {
-    long (*write)(struct file* file, const void* buf, size_t len);
-    long (*read)(struct file* file, void* buf, size_t len);
-    int (*open)(struct vnode* file_node, int flags, struct file **target);
-    int (*close)(struct file* file);
-    long (*lseek64)(struct file* file, long offset, int whence);
-    int (*ioctl)(struct file* file, unsigned long request, void *data);
+    long (*write)(struct file *file, const void *buf, size_t len);
+    long (*read)(struct file *file, void *buf, size_t len);
+    int (*open)(struct vnode *file_node, int flags, struct file **target);
+    int (*close)(struct file *file);
+    long (*lseek64)(struct file *file, long offset, int whence);
+    int (*ioctl)(struct file *file, unsigned long request, void *data);
 };
   
 struct vnode_operations 
 {
-    int (*lookup)(struct vnode* dir_node, struct vnode **target, const char* component_name);
-    int (*create)(struct vnode* dir_node, struct vnode **target, const char* component_name, file_type type);
-    int (*mkdir)(struct vnode* dir_node, struct vnode **target, const char* component_name);
+    int (*lookup)(struct vnode *dir_node, struct vnode **target, const char *component_name);
+    int (*create)(struct vnode *dir_node, struct vnode **target, const char *component_name, file_type type);
+    int (*mkdir)(struct vnode *dir_node, struct vnode **target, const char *component_name);
 };
 
 struct vnode 
 {
-    struct mount* mount;
-    struct vnode_operations* v_ops;
-    struct file_operations* f_ops;
+    struct mount *mount;
+    struct vnode_operations *v_ops;
+    struct file_operations *f_ops;
     struct list children;
     bool hidden;
     unsigned mode;
@@ -102,7 +102,7 @@ struct vnode
 
 struct filesystem 
 {
-    const char* name;
+    const char *name;
     int (*setup_mount)(struct filesystem *fs, struct mount *mount, 
                         struct vnode *dir_node, const char *component);
 };
@@ -110,27 +110,27 @@ struct filesystem
 // file handle
 struct file 
 {
-    struct vnode* vnode;
+    struct vnode *vnode;
     size_t f_pos;  // RW position of this file handle
-    struct file_operations* f_ops;
+    struct file_operations *f_ops;
     int flags;
     int ref_count;
 };
 
 extern struct mount *rootfs;
 
-int find_parent_vnode(const char* pathname, struct vnode **node, struct vnode **parent_vnode, char *component);
+int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **parent_vnode, char *component);
 void vfs_init();
-int register_filesystem(struct filesystem* fs);
-int vfs_mount(const char* target, const char* filesystem, unsigned flags);
-int vfs_open(const char* pathname, int flags, struct file **target);
-int vfs_close(struct file* file);
-long vfs_write(struct file* file, const void* buf, size_t len);
-long vfs_read(struct file* file, void* buf, size_t len);
-int vfs_lseek64(struct file* file, long offset, int whence);
-int vfs_ioctl(struct file* file, unsigned long request, void *data);
-int vfs_mkdir(const char* pathname, struct vnode **target);
-int vfs_create(const char* pathname, struct vnode **target, file_type type);
-int vfs_lookup(const char* pathname, struct vnode **target);
+int register_filesystem(struct filesystem *fs);
+int vfs_mount(const char *target, const char *filesystem, unsigned flags);
+int vfs_open(const char *pathname, int flags, struct file **target);
+int vfs_close(struct file *file);
+long vfs_write(struct file *file, const void *buf, size_t len);
+long vfs_read(struct file *file, void *buf, size_t len);
+int vfs_lseek64(struct file *file, long offset, int whence);
+int vfs_ioctl(struct file *file, unsigned long request, void *data);
+int vfs_mkdir(const char *pathname, struct vnode **target);
+int vfs_create(const char *pathname, struct vnode **target, file_type type);
+int vfs_lookup(const char *pathname, struct vnode **target);
 
 #endif
