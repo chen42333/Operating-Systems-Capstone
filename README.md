@@ -2,7 +2,23 @@
 ## Prerequisite
 OS: MacOS
 
-```brew install llvm qemu python3 pyserial```
+```
+brew install llvm qemu python3 pyserial
+```
+## Prepare
+- Insert SD card to computer and check the device path
+```
+diskutil list # MacOS
+```
+or
+```
+lsblk -f # Linux
+```
+- Run the script
+```
+chmod +x disk.sh
+sudo ./disk.sh <SD-path> [mount-point]
+```
 ## Running on RPI3
 1. Build kernel
 ```
@@ -25,10 +41,15 @@ make bootloader
 ```
 python3 send_kernel.py <tty-dev-path>
 ```
-6. Interact with Rpi3
+6. Interact with Rpi3 (`Minicom` or `screen`)
+- `Minicom`
 ```
 minicom -D <tty-dev-path> -b 115200 -o
 ``` 
+- `screen`
+```
+screen <tty-dev-path> 115200
+```
 ## Test on QEMU
 1. Build kernel
 ```
@@ -51,8 +72,9 @@ make test [_QEMUFLAGS=<additional flags>] [TARGET=<target>] [DISPLAY=true]
 - Use `DISPLAY=true` to let QEMU display video output
 4. Test with LLDB/GDB (optional)
 ```
-make debug _QEMUFLAGS=<additional flags> TARGET=<target> 
+make debug [_QEMUFLAGS=<additional flags>] [TARGET=<target>]
 ```
+Run LLDB/GDB at another terminal
 - GDB
 ```
 gdb <target>.elf

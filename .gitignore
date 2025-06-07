@@ -52,6 +52,10 @@ Mkfile.old
 dkms.conf
 
 *.img
+!nycuos.img
+!syscall.img
+!vm.img
+!vfs1.img
 *.cpio
 .vscode/
 .DS_Store
