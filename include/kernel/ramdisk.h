@@ -6,7 +6,7 @@
 #define INITRD_START_DTB_PATH "/chosen/linux,initrd-start"
 #define INITRD_END_DTB_PATH "/chosen/linux,initrd-end"
 
-#define MOUNT_POINT "/initramfs"
+#define INITRD_MOUNT_POINT "/initramfs"
 
 struct cpio_newc_header {
     char    c_magic[6];

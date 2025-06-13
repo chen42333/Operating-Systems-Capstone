@@ -80,7 +80,7 @@ test-int: $(TARGET_FILE) $(RAMDISK) $(DISK_IMG)
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d int
 
 $(RAMDISK): $(RAMDISK_FILES) $(TEST_PROG).img
-	cd $(RAMDISK_DIR) && find . | cpio -o -H newc > ../$@
+	cd $(RAMDISK_DIR) && find . -not -path "*/.DS_Store" -not -path "*/__MACOSX/*" | cpio -o -H newc > ../$@
 
 $(TEST_PROG).img: $(TEST_PROG_SRCS)
 	$(CC) $(CFLAGS) -c $< -o $(TEST_PROG).o

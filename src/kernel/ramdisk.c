@@ -8,6 +8,14 @@
 #include "vfs.h"
 #include "tmpfs.h"
 
+#define initramfs_create tmpfs_create
+#define initramfs_lookup tmpfs_lookup
+#define initramfs_mkdir tmpfs_mkdir
+#define initramfs_read tmpfs_read
+#define initramfs_open tmpfs_open
+#define initramfs_close tmpfs_close
+#define initramfs_lseek64 tmpfs_lseek64
+
 void *ramdisk_saddr;
 void *ramdisk_eaddr;
 static int dtb_str_idx = 0;
@@ -98,7 +106,7 @@ static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t p
                 int content_offset = ((sizeof(struct cpio_newc_header) + path_size + 3) & ~3) - sizeof(struct cpio_newc_header);
 
                 mnt->root->v_ops->create(parent, &cur, component, FILE);
-                cur->content = path + content_offset;
+                cur->internal = path + content_offset;
                 cur->file_size = file_size;
                 break;
             }
@@ -159,15 +167,15 @@ static int initramfs_setup_mount(struct filesystem *fs, struct mount *mount, str
         list_push(&dir_node->children, mount->root);
     mount->root->parent = dir_node;
 
-    mount->root->v_ops->create = tmpfs_create;
-    mount->root->v_ops->lookup = tmpfs_lookup;
-    mount->root->v_ops->mkdir = tmpfs_mkdir;
+    mount->root->v_ops->create = initramfs_create;
+    mount->root->v_ops->lookup = initramfs_lookup;
+    mount->root->v_ops->mkdir = initramfs_mkdir;
 
     mount->root->f_ops->write = NULL;
-    mount->root->f_ops->read = tmpfs_read;
-    mount->root->f_ops->open = tmpfs_open;
-    mount->root->f_ops->close = tmpfs_close;
-    mount->root->f_ops->lseek64 = tmpfs_lseek64;
+    mount->root->f_ops->read = initramfs_read;
+    mount->root->f_ops->open = initramfs_open;
+    mount->root->f_ops->close = initramfs_close;
+    mount->root->f_ops->lseek64 = initramfs_lseek64;
     mount->root->f_ops->ioctl = NULL;
 
     mount->root->mount = mount;
@@ -187,6 +195,6 @@ void initramfs_init() {
     initramfs->setup_mount = &initramfs_setup_mount;
 
     register_filesystem(initramfs);
-    vfs_mkdir(MOUNT_POINT, &node);
-    vfs_mount(MOUNT_POINT, initramfs->name, MS_RDONLY);
+    vfs_mkdir(INITRD_MOUNT_POINT, &node);
+    vfs_mount(INITRD_MOUNT_POINT, initramfs->name, MS_RDONLY);
 }

@@ -115,15 +115,24 @@ int cat(char *filename) {
         return -1;
     }
 
-    uart_write(node->content, node->file_size);
+    {
+        uint8_t buf[node->file_size];
+        struct file *f;
+
+        vfs_open(filename, O_RDONLY, &f);
+        vfs_read(f, buf, node->file_size);
+        vfs_close(f);
+        uart_write((char*)buf, node->file_size);
+    }
+    
     printf("\r\n");
 
     return 0;
 }
 
-
 void* load_prog(char *filename, size_t *prog_size) {
     struct vnode *node, *parent_node;
+    struct file *f;
     char component[STRLEN];
     void *prog_addr;
 
@@ -137,8 +146,9 @@ void* load_prog(char *filename, size_t *prog_size) {
         return NULL;
         
     *prog_size = node->file_size;
-    for (int i = 0; i < *prog_size; i++)
-        *((char*)prog_addr + i) = *(node->content + i);
+    vfs_open(filename, O_RDONLY, &f);
+    vfs_read(f, prog_addr, *prog_size);
+    vfs_close(f);
     
     return prog_addr;
 }

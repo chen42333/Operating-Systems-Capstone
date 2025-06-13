@@ -16,14 +16,14 @@ long tmpfs_write(struct file *file, const void *buf, size_t len) {
     if (file->f_pos + write_sz > file->vnode->file_size)
         file->vnode->file_size = file->f_pos + write_sz;
 
-    memcpy(file->vnode->content + file->f_pos, buf, write_sz);
+    memcpy(file->vnode->internal + file->f_pos, buf, write_sz);
     file->f_pos += write_sz;
 
     return write_sz;
 }
 
 long tmpfs_read(struct file *file, void *buf, size_t len) {
-    void *s = file->vnode->content + file->f_pos;
+    void *s = file->vnode->internal + file->f_pos;
     size_t read_sz = (len < file->vnode->file_size - file->f_pos) ? len : file->vnode->file_size - file->f_pos;
 
     memcpy(buf, s, read_sz);
@@ -97,26 +97,8 @@ int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
 }
 
 int tmpfs_init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const char *component_name) {
-    if (!node)
-    {
-        err("Failed to allocate vnode\r\n");
-        return -1;
-    }
-    
-    if (dir_node)
-    {
-        node->mount = dir_node->mount;
-        node->f_ops = dir_node->f_ops;
-        node->v_ops = dir_node->v_ops;
-        list_push(&dir_node->children, node);
-    }
-    node->parent = dir_node;
-    node->type = type;
-    node->hidden = false;
-    memset(&node->children, 0, sizeof(struct list));
-    strcpy(node->name, component_name);
-    node->file_size = 0;
-    if (type == FILE && !(node->content = malloc(MAX_FILE_SZ)))
+    if (init_vnode(dir_node, node, type, component_name) || 
+        (type == FILE && !(node->internal = malloc(MAX_FILE_SZ))))
         return -1;
         
     return 0;

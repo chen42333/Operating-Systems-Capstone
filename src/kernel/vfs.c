@@ -220,3 +220,27 @@ int vfs_lookup(const char *pathname, struct vnode **target) {
 
     return 0;
 }
+
+int init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const char *component_name) {
+    if (!node)
+    {
+        err("Failed to allocate vnode\r\n");
+        return -1;
+    }
+    
+    if (dir_node)
+    {
+        node->mount = dir_node->mount;
+        node->f_ops = dir_node->f_ops;
+        node->v_ops = dir_node->v_ops;
+        list_push(&dir_node->children, node);
+    }
+    node->parent = dir_node;
+    node->type = type;
+    node->hidden = false;
+    memset(&node->children, 0, sizeof(struct list));
+    strcpy(node->name, component_name);
+    node->file_size = 0;
+        
+    return 0;
+}

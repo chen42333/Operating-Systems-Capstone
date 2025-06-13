@@ -93,7 +93,7 @@ struct vnode {
     file_type type;
     char name[STRLEN];
     size_t file_size; // for file only
-    char *content;
+    void *internal; // Depends on FS. eg: this finl content for tmpfs/initramfs, cluster number for FAT32
 };
 
 struct filesystem {
@@ -126,5 +126,6 @@ int vfs_ioctl(struct file *file, unsigned long request, void *data);
 int vfs_mkdir(const char *pathname, struct vnode **target);
 int vfs_create(const char *pathname, struct vnode **target, file_type type);
 int vfs_lookup(const char *pathname, struct vnode **target);
+int init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const char *component_name);
 
 #endif
