@@ -13,6 +13,8 @@
 #define false 0
 #define INT_MAX 2147483647
 
+#define MMIO_BASE (void*)(0x3f000000 + v_kernel_space)
+
 typedef uint64_t size_t;
 
 extern char v_kernel_space[];
