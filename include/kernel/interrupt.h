@@ -48,31 +48,26 @@ void rx_int();
 int set_timeout();
 void core_timer_enable();
 
-inline static void enable_timer_int()
-{
+inline static void enable_timer_int() {
     asm volatile ("msr cntp_ctl_el0, %0" :: "r"((uint64_t)1));
 }
 
-inline static void disable_timer_int()
-{
+inline static void disable_timer_int() {
     asm volatile ("msr cntp_ctl_el0, %0" :: "r"((uint64_t)0));
 }
 
-inline static void task_queue_init()
-{
+inline static void task_queue_init() {
     ring_buf_init(&task_queue, task_queue_buf);
 }
 
-inline static void disable_int() 
-{
+inline static void disable_int() {
     asm volatile("msr daifset, #0xf" ::: "memory");
     irq_nested_count++;
 
     asm volatile("dmb ish" ::: "memory"); // Ensure all memory accesses after here see the locked state
 }
 
-inline static void enable_int() 
-{
+inline static void enable_int() {
     asm volatile("dmb ish" ::: "memory"); // Ensure all memory writes before releasing lock
 
     if (--irq_nested_count == 0)

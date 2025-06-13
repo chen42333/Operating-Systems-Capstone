@@ -29,8 +29,7 @@ inline static void set32(void *addr, uint32_t value) {
     *ptr = value;
 }
 
-inline static uint32_t get32(void *addr)
-{
+inline static uint32_t get32(void *addr) {
     volatile uint32_t *ptr = (uint32_t*)addr;
     return *ptr;
 }
@@ -40,8 +39,7 @@ inline static void set8(void *addr, char value) {
     *ptr = value;
 }
 
-inline static char get8(void *addr)
-{
+inline static char get8(void *addr) {
     volatile char *ptr = (char*)addr;
     return *ptr;
 }

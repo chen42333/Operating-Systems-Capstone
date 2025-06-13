@@ -28,8 +28,7 @@ bool need_schedule = false;
 
 extern struct strtok_ctx *ctx_shell;
 
-void add_timer(void(*callback)(void*), uint64_t duration, void *data)
-{
+void add_timer(void(*callback)(void*), uint64_t duration, void *data) {
     uint64_t count;
     struct timer_queue_element element;
     struct timer_queue_element *buf = (struct timer_queue_element*)timer_queue.buf;
@@ -46,19 +45,16 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
     element.data = data;
     ring_buf_produce(&timer_queue, &element, TIMER);
 
-    for (; ; idx--)
-    {
+    for (; ; idx--) {
         int cmp_idx = (idx + BUFLEN - 1) % BUFLEN;
 
-        if (idx == timer_queue.consumer_idx)
-        {
+        if (idx == timer_queue.consumer_idx) {
             // Program a new timer interrupt
             asm volatile ("msr cntp_tval_el0, %0" :: "r"(duration));
             break;
         }
         
-        if (count + duration < buf[cmp_idx].cur_ticks + buf[cmp_idx].duration_ticks)
-        {
+        if (count + duration < buf[cmp_idx].cur_ticks + buf[cmp_idx].duration_ticks) {
             // Move forward
             struct timer_queue_element tmp;
             
@@ -74,8 +70,7 @@ void add_timer(void(*callback)(void*), uint64_t duration, void *data)
     }
 }
 
-void add_task(void(*callback)(void*), prio priority, void *data)
-{
+void add_task(void(*callback)(void*), prio priority, void *data) {
     struct task_queue_element element;
 
     element.handler = callback;
@@ -84,8 +79,7 @@ void add_task(void(*callback)(void*), prio priority, void *data)
 
     if (priority < cur_priority) // Preempt
         process_task(&element);
-    else
-    {
+    else {
         struct task_queue_element *buf = (struct task_queue_element*)task_queue.buf;
         int idx = task_queue.producer_idx;
 
@@ -94,11 +88,9 @@ void add_task(void(*callback)(void*), prio priority, void *data)
 
         ring_buf_produce(&task_queue, &element, TASK);
 
-        for (; idx != task_queue.consumer_idx; idx--)
-        {
+        for (; idx != task_queue.consumer_idx; idx--) {
             int cmp_idx = (idx + BUFLEN - 1) % BUFLEN;
-            if (priority < buf[cmp_idx].priority)
-            {
+            if (priority < buf[cmp_idx].priority) {
                 // Move forward
                 struct task_queue_element tmp;
                 
@@ -115,8 +107,7 @@ void add_task(void(*callback)(void*), prio priority, void *data)
     }
 }
 
-void timer_int()
-{
+void timer_int() {
     struct timer_queue_element timer_data;
 
     disable_timer_int();
@@ -129,8 +120,7 @@ void timer_int()
 
     process_task(NULL);
 
-    if (need_schedule)
-    {
+    if (need_schedule) {
         need_schedule = false;
         enable_int(); // Since it may switch to a process with DAIF unmasked, here should enable interrupt temporary
         schedule();
@@ -138,8 +128,7 @@ void timer_int()
     }
 }
 
-void process_timer(void *data)
-{
+void process_timer(void *data) {
     uint64_t count, ival;
     struct timer_queue_element *element_ptr, *next_element_ptr;
 
@@ -148,8 +137,7 @@ void process_timer(void *data)
     element_ptr->handler(element_ptr->data);
 
     // Program the next timer interrupt
-    if (!ring_buf_empty(&timer_queue))
-    {
+    if (!ring_buf_empty(&timer_queue)) {
         next_element_ptr = &((struct timer_queue_element*)timer_queue.buf)[timer_queue.consumer_idx];
         asm volatile ("mrs %0, cntpct_el0" : "=r"(count));
         ival = next_element_ptr->cur_ticks + next_element_ptr->duration_ticks - count;
@@ -159,8 +147,7 @@ void process_timer(void *data)
     enable_timer_int();
 }
 
-void elasped_time(void *data)
-{
+void elasped_time(void *data) {
     uint64_t freq;
 
     asm volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
@@ -178,14 +165,12 @@ void elasped_time(void *data)
 #endif
 }
 
-void print_msg(void *data)
-{
+void print_msg(void *data) {
     printf("%s\r\n", data);
     free(data);
 }
 
-void init_timer_queue()
-{
+void init_timer_queue() {
     uint64_t freq;
 
     ring_buf_init(&timer_queue, timer_queue_buf);
@@ -194,8 +179,7 @@ void init_timer_queue()
     add_timer(elasped_time, freq / 1000 * TIMER_INT, NULL);
 }
 
-void core_timer_enable()
-{
+void core_timer_enable() {
 #ifdef EL0_FREQ_REG_ACCESS
     uint64_t tmp;
     asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
@@ -207,8 +191,7 @@ void core_timer_enable()
     set32(CORE0_TIMER_IRQ_CTRL, 2); // unmask timer interrupt
 }
 
-void exception_entry()
-{
+void exception_entry() {
    #ifdef TEST_EXCEPTION
     size_t value;
 
@@ -225,27 +208,23 @@ void exception_entry()
     asm volatile ("mrs %0, esr_el1" : "=r"(esr));
     ec = (esr & EC_MASK) >> 26;
 
-    if (ec == EC_DATA_ABORT || ec == EC_INSTRUCTION_ABORT)
-    {
+    if (ec == EC_DATA_ABORT || ec == EC_INSTRUCTION_ABORT) {
         size_t dfsc;
         void *v_fault_addr;
 
         dfsc = (esr & DFSC_MASK) >> 2;
         asm volatile("mrs %0, far_el1" : "=r"(v_fault_addr));
 
-        if (dfsc == DFSC_TRANSLATION)
-        {
+        if (dfsc == DFSC_TRANSLATION) {
             struct pcb_t *pcb = get_current();
             struct section *s = list_find(&pcb->sections, in_section, v_fault_addr);
 
-            if (s)
-            {
+            if (s) {
                 void *v_ttbr = p2v_trans_kernel(pcb->ttbr);
                 size_t s_page_idx, e_page_idx;
                 void *physical_addr;
 
-                switch (s->type)
-                {
+                switch (s->type) {
                     case TEXT:
                         s_page_idx = (size_t)USR_CODE_START / PAGE_SIZE;
                         e_page_idx = s_page_idx + (s->size - 1) / PAGE_SIZE + 1;
@@ -282,10 +261,8 @@ void exception_entry()
             void *fault_addr = v2p_trans(v_fault_addr, NULL);
             void *fault_page = (void*)((size_t)fault_addr & ~(PAGE_SIZE - 1));
             
-            if (get_w_permission(fault_page)) // COW
-            {
-                if (get_ref_count(fault_page) > 1)
-                {
+            if (get_w_permission(fault_page)) { // COW
+                if (get_ref_count(fault_page) > 1) {
                     void *v_fault_page = p2v_trans_kernel(fault_page);
                     void *v_new_page = malloc(PAGE_SIZE);
                     void *new_page = v2p_trans_kernel(v_new_page);
@@ -323,15 +300,13 @@ seg_fault:
     }
 }
 
-void process_task(struct task_queue_element *task) // Interrupt is disabled after process_task()
-{
+void process_task(struct task_queue_element *task) { // Interrupt is disabled after process_task()
     struct task_queue_element element;
     prio tmp = cur_priority;
 
     if (task != NULL)
         element = *task;
-    else 
-    {
+    else {
         if (ring_buf_empty(&task_queue) || cur_priority < ((struct task_queue_element*)task_queue.buf)[task_queue.consumer_idx].priority)
             return;
         
@@ -348,8 +323,7 @@ void process_task(struct task_queue_element *task) // Interrupt is disabled afte
     process_task(NULL);
 }
 
-void tx_int_task(void *data)
-{
+void tx_int_task(void *data) {
     set8(AUX_MU_IO_REG, *(char*)data);
 
     if (!list_empty(&wait_queue[W]) && 
@@ -360,8 +334,7 @@ void tx_int_task(void *data)
         enable_write_int();
 }
 
-void tx_int()
-{
+void tx_int() {
     char write_data;
 
     disable_write_int();
@@ -372,8 +345,7 @@ void tx_int()
     process_task(NULL);
 }
 
-void rx_int_task(void *data)
-{
+void rx_int_task(void *data) {
 #ifdef BLOCK_READ
     while (true) ; // For test preemption
 #endif
@@ -386,8 +358,7 @@ void rx_int_task(void *data)
     enable_read_int();
 }
 
-void rx_int()
-{
+void rx_int() {
     char read_data;
 
     disable_read_int();
@@ -398,8 +369,7 @@ void rx_int()
     process_task(NULL);
 }
 
-int set_timeout()
-{
+int set_timeout() {
     char *msg, *sec_str, *tail;
     void *data;
     uint32_t sec;

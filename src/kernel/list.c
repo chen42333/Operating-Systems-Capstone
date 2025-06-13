@@ -1,15 +1,13 @@
 #include "list.h"
 #include "utils.h"
 
-void list_push(struct list *l, void *ptr)
-{
+void list_push(struct list *l, void *ptr) {
     disable_int();
 
     struct node *tmp = calloc(1, sizeof(struct node));
     tmp->ptr = ptr;
 
-    if (l->tail)
-    {
+    if (l->tail) {
         l->tail->next = tmp;
         tmp->prev = l->tail;
     }
@@ -20,15 +18,13 @@ void list_push(struct list *l, void *ptr)
     enable_int();
 }
 
-void* list_pop(struct list *l)
-{
+void* list_pop(struct list *l) {
     disable_int();
 
     struct node *head = l->head;
     void *ret = NULL;
     
-    if (!list_empty(l))
-    {
+    if (!list_empty(l)) {
         ret = head->ptr;
         l->head = l->head->next;
         if (l->head)
@@ -43,17 +39,14 @@ void* list_pop(struct list *l)
     return ret;
 }
 
-void* list_delete(struct list *l, void *ptr)
-{
+void* list_delete(struct list *l, void *ptr) {
     disable_int();
 
     struct node *tmp = l->head;
     void *ret = NULL;
 
-    while (tmp)
-    {
-        if (tmp->ptr == ptr)
-        {
+    while (tmp) {
+        if (tmp->ptr == ptr) {
             if (tmp->prev)
                 tmp->prev->next = tmp->next;
             else
@@ -74,25 +67,21 @@ void* list_delete(struct list *l, void *ptr)
 
     enable_int();
 
-    if (!ret)
-    {
+    if (!ret) {
         err("Node not found\r\n");
     }
 
     return ret;
 }
 
-void* list_find(struct list *l, bool (*match)(void *ptr, void *data), void *match_data)
-{
+void* list_find(struct list *l, bool (*match)(void *ptr, void *data), void *match_data) {
     disable_int();
 
     struct node *tmp = l->head;
     void *ret = NULL;
 
-    while (tmp)
-    {
-        if (match(tmp->ptr, match_data))
-        {
+    while (tmp) {
+        if (match(tmp->ptr, match_data)) {
             ret = tmp->ptr;
             break;
         }
@@ -104,18 +93,15 @@ void* list_find(struct list *l, bool (*match)(void *ptr, void *data), void *matc
     return ret;
 }
 
-void list_rm_and_process(struct list *l, bool (*match)(void *ptr, void *data), void *match_data, void (*op)(void *ptr))
-{
+void list_rm_and_process(struct list *l, bool (*match)(void *ptr, void *data), void *match_data, void (*op)(void *ptr)) {
     disable_int();
 
     struct node *tmp = l->head;
 
-    while (tmp)
-    {
+    while (tmp) {
         struct node *next = tmp->next;
 
-        if (match(tmp->ptr, match_data))
-        {
+        if (match(tmp->ptr, match_data)) {
             op(tmp->ptr);
             if (tmp->prev)
                 tmp->prev->next = tmp->next;
@@ -136,14 +122,12 @@ void list_rm_and_process(struct list *l, bool (*match)(void *ptr, void *data), v
     enable_int();
 }
 
-void list_copy(struct list *dst, struct list *src)
-{
+void list_copy(struct list *dst, struct list *src) {
     disable_int();
 
     struct node *tmp = src->head;
 
-    while (tmp)
-    {
+    while (tmp) {
         list_push(dst, tmp->ptr);
         tmp = tmp->next;
     }

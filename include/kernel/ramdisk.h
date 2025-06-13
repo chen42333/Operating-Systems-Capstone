@@ -25,8 +25,7 @@ struct cpio_newc_header {
     char    c_check[8];
 };
 
-struct cpio_record
-{
+struct cpio_record {
     struct cpio_newc_header hdr;
     char payload[];
 };

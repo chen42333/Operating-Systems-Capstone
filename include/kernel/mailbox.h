@@ -23,8 +23,7 @@
 
 #define MBOX_CH_PROP 8
 
-struct framebuffer_info 
-{
+struct framebuffer_info {
     unsigned int width;
     unsigned int height;
     unsigned int pitch;

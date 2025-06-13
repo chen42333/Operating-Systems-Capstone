@@ -11,8 +11,7 @@
 #define ELR_EL1 regs[32]
 #define SPSR_EL1 regs[33]
 
-typedef enum syscall
-{
+typedef enum syscall {
     GET_PID = 0,
     UART_READ = 1,
     UART_WRITE = 2,
@@ -36,8 +35,7 @@ typedef enum syscall
     SIGRET = 20
 } syscall;
 
-struct trap_frame
-{
+struct trap_frame {
     size_t regs[TRAP_FRAME_REGS];
 };
 

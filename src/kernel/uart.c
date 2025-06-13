@@ -7,8 +7,7 @@
 struct ring_buf r_buf, w_buf;
 char read_buf[BUFLEN], write_buf[BUFLEN];
 
-void enable_uart_int()
-{
+void enable_uart_int() {
     uint32_t data;
 
     data = 0b1100;
@@ -26,8 +25,7 @@ void enable_uart_int()
     enable_int();
 }
 
-void uart_init()
-{
+void uart_init() {
     uint32_t data;
     // Set GPIO 14, 15 to ALT5
     data = get32(GPFSEL1);
@@ -56,16 +54,14 @@ void uart_init()
     set32(AUX_MU_CNTL_REG, 3); // enable the transmitter and receiver
 }
 
-int uart_write_char(char c)
-{
+int uart_write_char(char c) {
     ring_buf_produce(&w_buf, &c, CHAR);
     enable_write_int();
 
     return 0;
 }
 
-size_t uart_write(const char buf[], size_t size)
-{
+size_t uart_write(const char buf[], size_t size) {
     size_t i;
 
     if (ring_buf_remain_e(&w_buf) < size)
@@ -77,39 +73,32 @@ size_t uart_write(const char buf[], size_t size)
     return i;
 }
 
-size_t uart_read_string(char *str, size_t size)
-{
+size_t uart_read_string(char *str, size_t size) {
     size_t i;
     char c;
 
     enable_read_int();
 
-    for (i = 0; i < size - 1; i++)
-    {
+    for (i = 0; i < size - 1; i++) {
         ring_buf_consume(&r_buf, &c, CHAR);
 
-        if (c == 0x7f || c == 8) // backspace
-        {
-            if (i > 0)
-            {
+        if (c == 0x7f || c == 8) { // backspace
+            if (i > 0) {
                 i -= 2;
                 printf("\b \b");
             }
             else
                 i--;
         }
-        else if (c == '\r')
-        {
+        else if (c == '\r') {
             printf("\r\n");
             break;
         }
-        else if (c == '\0' || c == '\n')
-        {
+        else if (c == '\0' || c == '\n') {
             uart_write_char(c);
             break;
         } 
-        else
-        {
+        else {
             uart_write_char(c);
             str[i] = c;
         }
@@ -122,8 +111,7 @@ size_t uart_read_string(char *str, size_t size)
     return i;
 }
 
-size_t uart_read(char buf[], size_t size)
-{
+size_t uart_read(char buf[], size_t size) {
     size_t i;
     char c;
 
@@ -132,8 +120,7 @@ size_t uart_read(char buf[], size_t size)
     if (ring_buf_num_e(&r_buf) < size)
         wait(R, size);
 
-    for (i = 0; i < size; i++)
-    {
+    for (i = 0; i < size; i++) {
         ring_buf_consume(&r_buf, &c, CHAR);
         buf[i] = c;
     }

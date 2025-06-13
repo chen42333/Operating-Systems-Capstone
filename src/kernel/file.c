@@ -3,14 +3,12 @@
 #include "vfs.h"
 #include "uart.h"
 
-int open(const char *pathname, int flags)
-{
+int open(const char *pathname, int flags) {
     struct file *f;
     struct pcb_t *pcb = get_current();
     int idx;
 
-    if (~pcb->fd_bitmap == 0)
-    {
+    if (~pcb->fd_bitmap == 0) {
         err("Fd table is full\r\n");
         return -1;
     }
@@ -23,13 +21,11 @@ int open(const char *pathname, int flags)
     return idx;
 }
 
-int close(int fd)
-{
+int close(int fd) {
     struct pcb_t *pcb = get_current();
     struct file *f = pcb->fd_table[fd];
 
-    if (!f)
-    {
+    if (!f) {
         err("Invalid fd\r\n");
         return -1;
     }
@@ -40,22 +36,19 @@ int close(int fd)
     return vfs_close(f);
 }
 
-long write(int fd, const void *buf, unsigned long count)
-{
+long write(int fd, const void *buf, unsigned long count) {
     struct file *f = get_current()->fd_table[fd];
 
     return vfs_write(f, buf, count);
 }
 
-long read(int fd, void *buf, unsigned long count)
-{
+long read(int fd, void *buf, unsigned long count) {
     struct file *f = get_current()->fd_table[fd];
 
     return vfs_read(f, buf, count);
 }
 
-int mkdir(const char *pathname, unsigned mode)
-{
+int mkdir(const char *pathname, unsigned mode) {
     struct vnode *node;
 
     if (vfs_mkdir(pathname, &node) < 0 || !node)
@@ -66,16 +59,14 @@ int mkdir(const char *pathname, unsigned mode)
     return 0;
 }
 
-int mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
-{
+int mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data) {
     if (vfs_mount(target, filesystem, flags) < 0)
         return -1;
 
     return 0;
 }
 
-int chdir(const char *path)
-{
+int chdir(const char *path) {
     struct pcb_t *pcb = get_current();
     struct vnode *parent_vnode, *node;
     char component[STRLEN];
@@ -88,44 +79,38 @@ int chdir(const char *path)
     return 0;
 }
 
-long lseek64(int fd, long offset, int whence)
-{
+long lseek64(int fd, long offset, int whence) {
     struct file *f = get_current()->fd_table[fd];
 
     return vfs_lseek64(f, offset, whence);
 }
 
-void ls(char *dirname)
-{
+void ls(char *dirname) {
     struct vnode *node, *parent_node;
     char component[STRLEN];
 
     if (!dirname)
         dirname = get_current()->cur_dir->name;
 
-    if (find_parent_vnode(dirname, &node, &parent_node, component) < 0 || !node)
-    {
+    if (find_parent_vnode(dirname, &node, &parent_node, component) < 0 || !node) {
         err("No such directory\r\n");
         return;
     }
 
     parent_node = node;
 
-    for (struct node *tmp = parent_node->children.head; tmp; tmp = tmp->next)
-    {
+    for (struct node *tmp = parent_node->children.head; tmp; tmp = tmp->next) {
         node = tmp->ptr;
         if (!node->hidden)
             printf("%s\r\n", node->name);
     }
 }
 
-int cat(char *filename)
-{
+int cat(char *filename) {
     struct vnode *node, *parent_node;
     char component[STRLEN];
 
-    if (find_parent_vnode(filename, &node, &parent_node, component) < 0 || !node)
-    {
+    if (find_parent_vnode(filename, &node, &parent_node, component) < 0 || !node) {
         err("File not exists\r\n");
         return -1;
     }
@@ -137,14 +122,12 @@ int cat(char *filename)
 }
 
 
-void* load_prog(char *filename, size_t *prog_size)
-{
+void* load_prog(char *filename, size_t *prog_size) {
     struct vnode *node, *parent_node;
     char component[STRLEN];
     void *prog_addr;
 
-    if (find_parent_vnode(filename, &node, &parent_node, component) < 0 || !node)
-    {
+    if (find_parent_vnode(filename, &node, &parent_node, component) < 0 || !node) {
         err("File not exists\r\n");
         return NULL;
     }

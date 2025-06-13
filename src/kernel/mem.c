@@ -12,8 +12,7 @@
 
 static int dtb_str_idx = 0;
 
-void memcpy(void *dst, const void *src, uint32_t size)
-{
+void memcpy(void *dst, const void *src, uint32_t size) {
     volatile char *d = dst;
     volatile const char *s = src;
 
@@ -21,8 +20,7 @@ void memcpy(void *dst, const void *src, uint32_t size)
         *d++ = *s++;
 }
 
-void* memset(void *s, char c, size_t n)
-{
+void* memset(void *s, char c, size_t n) {
     char *p = (char*)s;
 
     for (int i = 0; i < n; i++)
@@ -34,8 +32,7 @@ void* memset(void *s, char c, size_t n)
 static void *heap_start = _sbrk;
 static void *heap_ptr = _sbrk;
 
-void* simple_malloc(size_t size)
-{
+void* simple_malloc(size_t size) {
     void *ret;
     size_t align_padding = 0;
 
@@ -76,8 +73,7 @@ void* simple_malloc(size_t size)
 //      1. idx: the index of the page in buddy system
 ////////////////////////////////////////
 
-struct 
-{
+struct {
     void *base;
     void *end;
     int num_pages_exp;
@@ -88,13 +84,11 @@ struct
 struct buddy_node *buddy_node_arr;
 void *usable_memory[2];
 
-inline static bool buddy_list_empty(int list_idx)
-{
+inline static bool buddy_list_empty(int list_idx) {
     return buddy_data.free_blocks_list[list_idx] == NULL;
 }
 
-static void buddy_delete_free_block(int idx, int list_idx)
-{
+static void buddy_delete_free_block(int idx, int list_idx) {
     disable_int();
 
     struct buddy_node *node_ptr = &buddy_node_arr[idx];
@@ -128,8 +122,7 @@ static void buddy_delete_free_block(int idx, int list_idx)
 #endif
 }
 
-static void buddy_insert_free_block(int idx, int list_idx)
-{
+static void buddy_insert_free_block(int idx, int list_idx) {
     disable_int();
 
     struct buddy_node *node_ptr = &buddy_node_arr[idx];
@@ -150,8 +143,7 @@ static void buddy_insert_free_block(int idx, int list_idx)
 #endif
 }
 
-void buddy_init()
-{
+void buddy_init() {
     size_t int_ptr;
 
     buddy_data.base = (void*)0x0;
@@ -185,8 +177,7 @@ void buddy_init()
     buddy_insert_free_block(0, buddy_data.num_pages_exp);
 }
 
-static void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
-{
+static void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size) {
     disable_int();
 
     if (block_size_exp == 0 || (1 << (block_size_exp - 1)) < required_size)
@@ -211,8 +202,7 @@ static void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size)
     enable_int();
 }
 
-void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */)
-{
+void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */) {
     disable_int();
 
     int list_idx = 0, idx;
@@ -247,8 +237,7 @@ void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */)
     return (void*)(idx * PAGE_SIZE); // For kernel space
 }
 
-static void buddy_merge_block(int idx, int block_size_exp)
-{
+static void buddy_merge_block(int idx, int block_size_exp) {
     disable_int();
 
     int buddy_idx, big_idx, small_idx;
@@ -287,8 +276,7 @@ static void buddy_merge_block(int idx, int block_size_exp)
     enable_int();
 }
 
-void buddy_free(void *ptr)
-{
+void buddy_free(void *ptr) {
     disable_int();
 
     int idx, list_idx;
@@ -327,8 +315,7 @@ void buddy_free(void *ptr)
     enable_int();
 }
 
-static void buddy_clear_block(int idx, int block_size_exp)
-{
+static void buddy_clear_block(int idx, int block_size_exp) {
     int buddy_idx;
 
     if (idx % (1 << block_size_exp) != 0)
@@ -358,8 +345,7 @@ static void buddy_clear_block(int idx, int block_size_exp)
     buddy_data.arr[buddy_idx] = EMPTY; // Reset manually
 }
 
-void memory_reserve(void *start, void *end)
-{
+void memory_reserve(void *start, void *end) {
     void *reserve_start;
     int reserve_len_exp = 0; // The unit is "page"
     int idx, parent_idx;
@@ -448,8 +434,7 @@ void memory_reserve(void *start, void *end)
 struct dynamic_node *mem_pool[MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP + 1];
 static struct dynamic_node *dynamic_node_arr;
 
-void dynamic_allocator_init()
-{
+void dynamic_allocator_init() {
     for (int i = 0; i <= MAX_POOL_SIZE_EXP - MIN_POOL_SIZE_EXP; i++)
         mem_pool[i] = NULL;
 
@@ -466,8 +451,7 @@ void dynamic_allocator_init()
     }
 }
 
-void* malloc(size_t size)
-{
+void* malloc(size_t size) {
     disable_int();
 
     int size_exp = 0;
@@ -554,14 +538,12 @@ void* malloc(size_t size)
     return node_ptr->addr;
 }
 
-void* calloc(size_t nitems, size_t size)
-{
+void* calloc(size_t nitems, size_t size) {
     size_t sz = nitems * size;
     return memset(malloc(sz), 0, sz);
 }
 
-void free(void *vptr)
-{
+void free(void *vptr) {
     disable_int();
 
     int page_idx;
@@ -633,8 +615,7 @@ void free(void *vptr)
     enable_int();
 }
 
-void reserve_mem_regions()
-{
+void reserve_mem_regions() {
     memory_reserve((void*)SPIN_TABLE_START, (void*)SPIN_TABLE_END); // Spin tables for multicore boot
     memory_reserve(v2p_trans_kernel(_stext), v2p_trans_kernel(_estack)); // Kernel image
     memory_reserve((void*)PGD_ADDR, (void*)PUD_ADDR + PAGE_SIZE); // Identity paging
@@ -648,8 +629,7 @@ void reserve_mem_regions()
         memory_reserve(usable_memory[1], buddy_data.end);
 }
 
-bool mem_region(void *p, char *name)
-{
+bool mem_region(void *p, char *name) {
     struct fdt_node_comp *ptr = (struct fdt_node_comp*)p;
     int i;
     bool last = false;
@@ -697,14 +677,12 @@ bool mem_region(void *p, char *name)
 
 static struct page *usr_pages;
 
-void page_ref_init()
-{
+void page_ref_init() {
     usr_pages = simple_malloc((1 << buddy_data.num_pages_exp) * sizeof(struct page));
     memset(usr_pages, 0, (1 << buddy_data.num_pages_exp) * sizeof(struct page));
 }
 
-void set_w_permission(void *ptr, bool w)
-{
+void set_w_permission(void *ptr, bool w) {
     disable_int();
 
     size_t idx = (size_t)ptr / PAGE_SIZE;
@@ -720,8 +698,7 @@ void set_w_permission(void *ptr, bool w)
     enable_int();
 }
 
-bool get_w_permission(void *ptr)
-{
+bool get_w_permission(void *ptr) {
     disable_int();
 
     bool ret = false;
@@ -740,8 +717,7 @@ bool get_w_permission(void *ptr)
     return ret;
 }
 
-uint16_t get_ref_count(void *ptr)
-{
+uint16_t get_ref_count(void *ptr) {
     disable_int();
 
     uint16_t ret = ~0;
@@ -760,8 +736,7 @@ uint16_t get_ref_count(void *ptr)
     return ret;
 }
 
-void ref_page(void *ptr)
-{
+void ref_page(void *ptr) {
     disable_int();
 
     size_t idx = (size_t)ptr / PAGE_SIZE;
@@ -776,8 +751,7 @@ void ref_page(void *ptr)
     enable_int();
 }
 
-void deref_page(void *ptr)
-{
+void deref_page(void *ptr) {
     disable_int();
 
     size_t idx = (size_t)ptr / PAGE_SIZE;

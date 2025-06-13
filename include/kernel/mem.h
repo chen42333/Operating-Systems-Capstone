@@ -20,15 +20,13 @@
 
 #define USABLE_MEM_DTB_PATH "/memory/reg"
 
-struct buddy_node
-{
+struct buddy_node {
     int idx;
     struct buddy_node *prev;
     struct buddy_node *next;
 };
 
-struct dynamic_node
-{
+struct dynamic_node {
     void *addr; // Virtual
     size_t chunk_size;
     int sum;
@@ -37,19 +35,16 @@ struct dynamic_node
     struct dynamic_node *next;
 };
 
-struct page
-{
+struct page {
     uint16_t ref_count;
     uint8_t w_permission;
 };
 
-inline static void *p2v_trans_kernel(void *physical_addr)
-{
+inline static void *p2v_trans_kernel(void *physical_addr) {
     return physical_addr + (size_t)v_kernel_space;
 }
 
-inline static void *v2p_trans_kernel(void *physical_addr)
-{
+inline static void *v2p_trans_kernel(void *physical_addr) {
     return physical_addr - (size_t)v_kernel_space;
 }
 

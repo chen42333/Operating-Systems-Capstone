@@ -6,25 +6,21 @@
 #include "mem.h"
 #include "interrupt.h"
 
-struct node
-{
+struct node {
     void *ptr;
     struct node *prev;
     struct node *next;
 };
 
-struct list
-{
+struct list {
     struct node *head, *tail;
 };
 
-inline static bool list_empty(struct list *l)
-{
+inline static bool list_empty(struct list *l) {
     return !l->head;
 }
 
-inline static void* list_top(struct list *l)
-{
+inline static void* list_top(struct list *l) {
     void *ret = NULL;
 
     if (l->head)

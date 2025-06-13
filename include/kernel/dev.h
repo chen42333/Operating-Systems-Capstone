@@ -10,8 +10,7 @@
 
 typedef uint32_t mode_t;
 typedef uint32_t dev_t;
-typedef struct device 
-{
+typedef struct device {
     char *pathname;
     dev_t dev_number;
     void (*driver)(struct vnode *node);

@@ -5,8 +5,7 @@
 struct mount *rootfs;
 static struct list fs_list;
 
-static bool same_fs_name(void *ptr, void *data)
-{
+static bool same_fs_name(void *ptr, void *data) {
     struct filesystem *fs = ptr;
     char *fs_name = data;
 
@@ -16,8 +15,7 @@ static bool same_fs_name(void *ptr, void *data)
     return false;
 }
 
-int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **parent_vnode, char *component)
-{
+int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **parent_vnode, char *component) {
     struct mount *mnt;
     struct strtok_ctx *ctx;
     char *comp = strtok_r((char*)pathname, "/", &ctx), *tmp;
@@ -31,8 +29,7 @@ int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **
         cur = pcb->cur_dir->parent;
     else if (!strcmp(".", comp))
         cur = pcb->cur_dir;
-    else
-    {
+    else {
         cur = pcb->cur_dir;
         skip = true;
     }
@@ -40,8 +37,7 @@ int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **
     mnt = cur->mount;
     parent = cur->parent;
 
-    while (skip || ((tmp = strtok_r(NULL, "/", &ctx)) != NULL && strlen(tmp) > 0)) // Ignore the last '/' (except the first)
-    {
+    while (skip || ((tmp = strtok_r(NULL, "/", &ctx)) != NULL && strlen(tmp) > 0)) { // Ignore the last '/' (except the first)
         if (skip)
             skip = false;
         else
@@ -49,10 +45,8 @@ int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **
             
         parent = cur;
         mnt->root->v_ops->lookup(parent, &cur, comp);
-        if (!cur)
-        {
-            if (strtok_r(NULL, "/", &ctx) != NULL)
-            {
+        if (!cur) {
+            if (strtok_r(NULL, "/", &ctx) != NULL) {
                 err("%s: No such directory\r\n", comp);
                 return -1;
             } 
@@ -71,15 +65,12 @@ int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **
     return 0;
 }
 
-void vfs_init()
-{
+void vfs_init() {
     memset(&fs_list, 0, sizeof(struct list));
 }
 
-int register_filesystem(struct filesystem *fs) 
-{
-    if (list_find(&fs_list, same_fs_name, (void*)fs->name))
-    {
+int register_filesystem(struct filesystem *fs) {
+    if (list_find(&fs_list, same_fs_name, (void*)fs->name)) {
         err("Invalid file system name (already exists)\r\n");
         return -1;
     }
@@ -88,15 +79,13 @@ int register_filesystem(struct filesystem *fs)
     return 0;
 }
 
-int vfs_mount(const char *target, const char *filesystem, unsigned flags)
-{
+int vfs_mount(const char *target, const char *filesystem, unsigned flags) {
     struct filesystem *fs = list_find(&fs_list, same_fs_name, (void*)filesystem);
     struct mount *mnt;
     struct vnode *node, *parent_vnode = NULL;
     char component[STRLEN];
 
-    if (!fs)
-    {
+    if (!fs) {
         err("File system not registered\r\n");
         return -1;
     }
@@ -107,25 +96,21 @@ int vfs_mount(const char *target, const char *filesystem, unsigned flags)
     mnt->fs = fs;
     mnt->flags = flags;
 
-    if (!(mnt->root = malloc(sizeof(struct vnode))))
-    {
+    if (!(mnt->root = malloc(sizeof(struct vnode)))) {
         free(mnt);
         return -1;
     }
 
-    if (!strcmp("/", target)) 
-    {
+    if (!strcmp("/", target)) {
         rootfs = mnt;
         strcpy(component, "");
     } else { // The mount point should already exist
-        if (find_parent_vnode(target, &node, &parent_vnode, component) < 0)
-        {
+        if (find_parent_vnode(target, &node, &parent_vnode, component) < 0) {
             free(mnt->root);
             free(mnt);
             return -1;
         }
-        if (!node || node->type != DIR)
-        {
+        if (!node || node->type != DIR) {
             err("%s: No such directory\r\n", component);
             free(mnt->root);
             free(mnt);
@@ -138,15 +123,13 @@ int vfs_mount(const char *target, const char *filesystem, unsigned flags)
     return fs->setup_mount(fs, mnt, parent_vnode, component);
 }
 
-int vfs_open(const char *pathname, int flags, struct file **target) 
-{
+int vfs_open(const char *pathname, int flags, struct file **target) {
     struct vnode *node;
 
     if (vfs_lookup(pathname, &node) < 0)
         return -1;
 
-    if (!node)
-    {
+    if (!node) {
         if (flags & O_CREAT) // Create the node and then find again
             vfs_create(pathname, &node, FILE);
         else {
@@ -158,15 +141,12 @@ int vfs_open(const char *pathname, int flags, struct file **target)
     return node->f_ops->open(node, flags, target);
 }
 
-int vfs_close(struct file *file) 
-{
+int vfs_close(struct file *file) {
     return file->f_ops->close(file);
 }
 
-long vfs_write(struct file *file, const void *buf, size_t len) 
-{
-    if (file->vnode->mount->flags & MS_RDONLY || file->flags & O_RDONLY)
-    {
+long vfs_write(struct file *file, const void *buf, size_t len) {
+    if (file->vnode->mount->flags & MS_RDONLY || file->flags & O_RDONLY) {
         err("Permission denied\r\n");
         return -1;
     }
@@ -174,10 +154,8 @@ long vfs_write(struct file *file, const void *buf, size_t len)
     return file->f_ops->write(file, buf, len);
 }
 
-long vfs_read(struct file *file, void *buf, size_t len) 
-{
-    if (file->flags & O_WRONLY)
-    {
+long vfs_read(struct file *file, void *buf, size_t len) {
+    if (file->flags & O_WRONLY) {
         err("Permission denied\r\n");
         return -1;
     }
@@ -185,26 +163,22 @@ long vfs_read(struct file *file, void *buf, size_t len)
     return file->f_ops->read(file, buf, len);
 }
 
-int vfs_lseek64(struct file *file, long offset, int whence)
-{
+int vfs_lseek64(struct file *file, long offset, int whence) {
     return file->f_ops->lseek64(file, offset, whence);
 }
 
-int vfs_ioctl(struct file *file, unsigned long request, void *data)
-{
+int vfs_ioctl(struct file *file, unsigned long request, void *data) {
     return file->f_ops->ioctl(file, request, data);
 }
 
-int vfs_mkdir(const char *pathname, struct vnode**target)
-{
+int vfs_mkdir(const char *pathname, struct vnode**target) {
     struct mount *mnt;
     struct vnode *node, *parent_vnode;
     char component[STRLEN];
 
     if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0)
         return -1;
-    if (node)
-    {
+    if (node) {
         err("Directoty exists\r\n");
         return -1;
     }
@@ -216,16 +190,14 @@ int vfs_mkdir(const char *pathname, struct vnode**target)
     return 0;
 }
 
-int vfs_create(const char *pathname, struct vnode **target, file_type type)
-{
+int vfs_create(const char *pathname, struct vnode **target, file_type type) {
     struct mount *mnt;
     struct vnode *node, *parent_vnode;
     char component[STRLEN];
 
     if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0)
         return -1;
-    if (node)
-    {
+    if (node) {
         err("File exists\r\n");
         return -1;
     }
@@ -237,8 +209,7 @@ int vfs_create(const char *pathname, struct vnode **target, file_type type)
     return 0;
 }
 
-int vfs_lookup(const char *pathname, struct vnode **target)
-{
+int vfs_lookup(const char *pathname, struct vnode **target) {
     struct vnode *node, *parent_vnode;
     char component[STRLEN];
 

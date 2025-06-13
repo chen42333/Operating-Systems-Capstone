@@ -30,8 +30,7 @@ typedef enum stat { RUN, READY, WAIT, DEAD } stat;
 typedef enum event { PROC, R, W, _LAST } event;
 typedef enum sec { TEXT, HEAP, STACK, DEVICE } sec;
 
-struct pcb_t
-{
+struct pcb_t {
     pid_t pid;
     void *args;
     int el;
@@ -55,8 +54,7 @@ struct pcb_t
     uint16_t fd_bitmap;
 };
 
-struct section
-{
+struct section {
     sec type;
     void *base; // Virtual address
     size_t size;

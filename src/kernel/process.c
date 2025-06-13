@@ -8,8 +8,7 @@
 pid_t last_pid = 0;
 struct list ready_queue, dead_queue, wait_queue[_LAST];
 struct pcb_t *pcb_table[MAX_PROC];
-void (*default_sig_handler[_NSIG])() = 
-{
+void (*default_sig_handler[_NSIG])() =  {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
     NULL, exit, NULL, NULL, NULL, NULL, NULL, NULL, 
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
@@ -20,8 +19,7 @@ void (*default_sig_handler[_NSIG])() =
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-void ps()
-{
+void ps() {
     for (int i = 0; i < MAX_PROC; i++)
     {
         struct pcb_t *pcb = pcb_table[i];
@@ -49,8 +47,7 @@ void ps()
     printf("\r\n");
 }
 
-static int init_uart_fd(struct file *fd_table[], uint16_t *fd_bitmap)
-{
+static int init_uart_fd(struct file *fd_table[], uint16_t *fd_bitmap) {
     struct file *f;
 
     if (vfs_open(DEV_UART, O_RDWR, &f) < 0)
@@ -64,8 +61,7 @@ static int init_uart_fd(struct file *fd_table[], uint16_t *fd_bitmap)
     return 0;
 }
 
-void init_pcb()
-{
+void init_pcb() {
     struct pcb_t *pcb;
 
     pcb = calloc(1, sizeof(struct pcb_t));
@@ -90,13 +86,11 @@ void init_pcb()
     set_current(pcb);
 }
 
-void free_init_pcb()
-{
+void free_init_pcb() {
     free((void*)pcb_table[0]);
 }
 
-pid_t thread_create(void (*func)(void *args), void *args)
-{
+pid_t thread_create(void (*func)(void *args), void *args) {
     struct pcb_t *pcb;
     pid_t pid;
 
@@ -140,8 +134,7 @@ pid_t thread_create(void (*func)(void *args), void *args)
     return pid;
 }
 
-void switch_to_next(struct pcb_t *prev)
-{
+void switch_to_next(struct pcb_t *prev) {
     struct pcb_t *next = list_pop(&ready_queue);
 
     disable_int();
@@ -198,8 +191,7 @@ out:
     ; // the following will do the restoration of fp and lr
 }
 
-void schedule()
-{
+void schedule() {
     struct pcb_t *prev;
 
     if (list_empty(&ready_queue))
@@ -221,14 +213,12 @@ void schedule()
     switch_to_next(prev);
 }
 
-void _exit()
-{
+void _exit() {
     register int syscall_id __asm__("x8") = EXIT;
     asm volatile ("svc #0":: "r"(syscall_id): "memory");
 }
 
-void add_section(struct pcb_t *pcb, sec type, void *base, size_t len)
-{
+void add_section(struct pcb_t *pcb, sec type, void *base, size_t len) {
     struct section *s;
 
     s = malloc(sizeof(struct section));
@@ -238,8 +228,7 @@ void add_section(struct pcb_t *pcb, sec type, void *base, size_t len)
     list_push(&pcb->sections, s);
 }
 
-void free_sections(struct list *sections, void *ttbr)
-{
+void free_sections(struct list *sections, void *ttbr) {
     struct section *s = list_pop(sections);
 
     while (s)
@@ -252,8 +241,7 @@ void free_sections(struct list *sections, void *ttbr)
     }
 }
 
-bool in_section(void *ptr, void *addr)
-{
+bool in_section(void *ptr, void *addr) {
     struct section *s = ptr;
 
     if (addr >= s->base && addr < s->base + s->size)
@@ -262,8 +250,7 @@ bool in_section(void *ptr, void *addr)
     return false;
 }
 
-static void kill_zombies()
-{
+static void kill_zombies() {
     struct pcb_t *pcb = list_pop(&dead_queue);
 
     while (pcb)
@@ -278,8 +265,7 @@ static void kill_zombies()
     }
 }
 
-void idle()
-{
+void idle() {
     while (true)
     {
         kill_zombies();
@@ -287,8 +273,7 @@ void idle()
     }
 }
 
-void wait(event e, size_t data)
-{
+void wait(event e, size_t data) {
     struct pcb_t *pcb = get_current();
 
     disable_int();
@@ -311,8 +296,7 @@ void wait(event e, size_t data)
     switch_to_next(pcb);
 }
 
-void wait_to_ready(void *ptr)
-{
+void wait_to_ready(void *ptr) {
     struct pcb_t *pcb = (struct pcb_t*)ptr;
     
     disable_int();

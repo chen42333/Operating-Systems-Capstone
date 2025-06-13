@@ -6,8 +6,7 @@
 #include "file.h"
 #include "dev.h"
 
-void syscall_entry(struct trap_frame *frame)
-{
+void syscall_entry(struct trap_frame *frame) {
     enable_int();
 
     switch ((syscall)frame->nr_syscall)
@@ -85,13 +84,11 @@ void syscall_entry(struct trap_frame *frame)
     disable_int();
 }
 
-pid_t getpid()
-{
+pid_t getpid() {
     return get_current()->pid;
 }
 
-int exec(const char *name, char *const argv[])
-{
+int exec(const char *name, char *const argv[]) {
     struct pcb_t *pcb = get_current();
     void *prog_addr;
     size_t prog_size;
@@ -129,13 +126,11 @@ int exec(const char *name, char *const argv[])
     return 0;
 }
 
-static bool match_pid(void *ptr, void *data)
-{
+static bool match_pid(void *ptr, void *data) {
     return (pid_t)((struct pcb_t*)ptr)->wait_data == *(pid_t*)data;
 }
 
-static void add_ref_sections(struct list *l, void *ttbr)
-{
+static void add_ref_sections(struct list *l, void *ttbr) {
     struct node *tmp = l->head;
 
     while (tmp)
@@ -155,8 +150,7 @@ static void add_ref_sections(struct list *l, void *ttbr)
     }
 }
 
-int fork()
-{
+int fork() {
     struct pcb_t *pcb = get_current(), *new_pcb;
     void *frame_ptr, *stack_ptr, *tmp;;
     volatile pid_t new_pid;
@@ -222,8 +216,7 @@ out:
         return 0;
 }
 
-void exit()
-{
+void exit() {
     struct pcb_t *pcb = get_current();
 
     if (pcb->state == DEAD)
@@ -243,8 +236,7 @@ void exit()
     switch_to_next(pcb);
 }
 
-void kill(pid_t pid)
-{
+void kill(pid_t pid) {
     struct pcb_t *pcb = pcb_table[pid];
     if (!pcb)
     {

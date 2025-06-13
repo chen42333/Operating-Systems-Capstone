@@ -28,8 +28,7 @@ size_t uart_write(const char buf[], size_t size);
 size_t uart_read_string(char *str, size_t size);
 size_t uart_read(char buf[], size_t size);
 
-inline static void enable_read_int()
-{
+inline static void enable_read_int() {
     uint32_t data;
 
     data = get32(AUX_MU_IER_REG);
@@ -37,8 +36,7 @@ inline static void enable_read_int()
     set32(AUX_MU_IER_REG, data);
 }
 
-inline static void disable_read_int()
-{
+inline static void disable_read_int() {
     uint32_t data;
 
     data = get32(AUX_MU_IER_REG);
@@ -46,8 +44,7 @@ inline static void disable_read_int()
     set32(AUX_MU_IER_REG, data);
 }
 
-inline static void enable_write_int()
-{
+inline static void enable_write_int() {
     uint32_t data;
 
     data = get32(AUX_MU_IER_REG);
@@ -55,8 +52,7 @@ inline static void enable_write_int()
     set32(AUX_MU_IER_REG, data);
 }
 
-inline static void disable_write_int()
-{
+inline static void disable_write_int() {
     uint32_t data;
 
     data = get32(AUX_MU_IER_REG);
@@ -64,8 +60,7 @@ inline static void disable_write_int()
     set32(AUX_MU_IER_REG, data);
 }
 
-inline static void clear_read_fifo()
-{
+inline static void clear_read_fifo() {
     uint32_t data;
 
     data = get32(AUX_MU_IIR_REG);
@@ -73,8 +68,7 @@ inline static void clear_read_fifo()
     set32(AUX_MU_IIR_REG, data);
 }
 
-inline static void clear_write_fifo()
-{
+inline static void clear_write_fifo() {
     uint32_t data;
 
     data = get32(AUX_MU_IIR_REG);

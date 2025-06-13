@@ -26,8 +26,7 @@ void fork_test();
 
 struct strtok_ctx *ctx_shell;
 
-int main(void *_dtb_addr)
-{
+int main(void *_dtb_addr) {
     char cmd[STRLEN], *arg0;
 
     // get_current() will get NULL until initializtion finish (init_pcb)
@@ -63,8 +62,7 @@ int main(void *_dtb_addr)
     init_pcb();
     thread_create(idle, NULL);
 
-    while (true)
-    {
+    while (true) {
         printf("# ");
         uart_read_string(cmd, STRLEN);
         arg0 = strtok_r(cmd, " ", &ctx_shell);
@@ -93,15 +91,13 @@ int main(void *_dtb_addr)
             reset(1);
         else if (!strcmp("ls", arg0))
             ls(strtok_r(NULL, "", &ctx_shell));
-        else if (!strcmp("cat", arg0))
-        {
+        else if (!strcmp("cat", arg0)) {
             if (cat(strtok_r(NULL, "", &ctx_shell)) < 0)
                 printf("File not found\r\n");
         }
         else if (!strcmp("memAlloc", arg0))
             mem_alloc();
-        else if (!strcmp("ldProg", arg0))
-        {
+        else if (!strcmp("ldProg", arg0)) {
             pid_t pid = fork();
 
             if (pid == 0)
@@ -109,8 +105,7 @@ int main(void *_dtb_addr)
             else
                 wait(PROC, pid);
         }
-        else if (!strcmp("setTimeout", arg0))
-        {
+        else if (!strcmp("setTimeout", arg0)) {
             if (set_timeout())
                 printf("Invalid argument\r\n");
         }
@@ -122,8 +117,7 @@ int main(void *_dtb_addr)
             _malloc();
         else if (!strcmp("free", arg0))
             _free();
-        else if (!strcmp("thread", arg0))
-        {
+        else if (!strcmp("thread", arg0)) {
             for(int i = 0; i < 5; i++)
                 thread_create(foo, NULL);
             // idle();
@@ -142,14 +136,12 @@ int main(void *_dtb_addr)
     return 0;
 }
 
-void mem_alloc()
-{
+void mem_alloc() {
     char *sz = strtok_r(NULL, "", &ctx_shell);
     size_t size;
     void *data;
 
-    if (sz == NULL)
-    {
+    if (sz == NULL) {
         printf("Invalid argument\r\n");
         return;
     }
@@ -159,8 +151,7 @@ void mem_alloc()
     else
         size = str2u32(sz, strlen(sz));
 
-    if (size == 0)
-    {
+    if (size == 0) {
         printf("Invalid number\r\n");
         return;
     }
@@ -171,14 +162,12 @@ void mem_alloc()
         printf("Allocator test: The data allocated from the heap is: 0x%x\r\n", (uintptr_t)data);
 }
 
-void page_alloc()
-{
+void page_alloc() {
     char *sz = strtok_r(NULL, "", &ctx_shell);
     size_t size;
     void *data;
 
-    if (sz == NULL)
-    {
+    if (sz == NULL) {
         printf("Invalid argument\r\n");
         return;
     }
@@ -188,8 +177,7 @@ void page_alloc()
     else
         size = str2u32(sz, strlen(sz));
 
-    if (size == 0)
-    {
+    if (size == 0) {
         printf("Invalid number\r\n");
         return;
     }
@@ -200,13 +188,11 @@ void page_alloc()
         printf("Allocator test: The pages allocated are from 0x%x\r\n", (uintptr_t)data);
 }
 
-void page_free()
-{
+void page_free() {
     char *str = strtok_r(NULL, "", &ctx_shell);
     void *ptr;
 
-    if (str == NULL)
-    {
+    if (str == NULL) {
         printf("Invalid argument\r\n");
         return;
     }
@@ -219,20 +205,17 @@ void page_free()
     ptr = v2p_trans(ptr, NULL);
     if (ptr)
         buddy_free(ptr);
-    else
-    {
+    else {
         err("Invalid page\r\n");
     }
 }
 
-void _malloc()
-{
+void _malloc() {
     char *sz = strtok_r(NULL, "", &ctx_shell);
     size_t size;
     void *data;
 
-    if (sz == NULL)
-    {
+    if (sz == NULL) {
         printf("Invalid argument\r\n");
         return;
     }
@@ -242,8 +225,7 @@ void _malloc()
     else
         size = str2u32(sz, strlen(sz));
 
-    if (size == 0)
-    {
+    if (size == 0) {
         printf("Invalid number\r\n");
         return;
     }
@@ -254,13 +236,11 @@ void _malloc()
         printf("Allocator test: The pages allocated are from 0x%x\r\n", (uintptr_t)data);
 }
 
-void _free()
-{
+void _free() {
     char *str = strtok_r(NULL, "", &ctx_shell);
     void *ptr;
 
-    if (str == NULL)
-    {
+    if (str == NULL) {
         printf("Invalid argument\r\n");
         return;
     }
@@ -273,8 +253,7 @@ void _free()
     free(ptr);
 }
 
-void foo(void *args)
-{
+void foo(void *args) {
     struct pcb_t *pcb = get_current();
 
     for(int i = 0; i < 10; ++i) {
@@ -285,7 +264,7 @@ void foo(void *args)
     }
 }
 
-void fork_test(){
+void fork_test() {
     printf("\r\nFork Test, pid %d\r\n", getpid());
     int cnt = 1;
     int ret = 0;
@@ -295,7 +274,7 @@ void fork_test(){
         printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\r\n", getpid(), cnt, &cnt, cur_sp);
         ++cnt;
 
-        if ((ret = fork()) != 0){
+        if ((ret = fork()) != 0) {
             asm volatile("mov %0, sp" : "=r"(cur_sp));
             printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\r\n", getpid(), cnt, &cnt, cur_sp);
         }

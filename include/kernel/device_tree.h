@@ -23,19 +23,17 @@ struct fdt_header {
     uint32_t size_dt_struct;
 };
 
-struct fdt_node_comp
-{
+struct fdt_node_comp {
     uint32_t token;
     char data[];
 };
 
-struct fdt_node_prop{
+struct fdt_node_prop {
     uint32_t len;
     uint32_t nameoff;
 };
 
-inline static void dtb_get_len()
-{
+inline static void dtb_get_len() {
     dtb_len = big2host(((struct fdt_header*)dtb_addr)->totalsize);
 }
 

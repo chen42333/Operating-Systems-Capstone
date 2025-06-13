@@ -8,8 +8,7 @@ int getpid();
 int fork();
 void exit();
 
-int main()
-{
+int main() {
     printf("\nFork Test, pid %d\n", getpid());
     int cnt = 1;
     int ret = 0;
@@ -19,11 +18,11 @@ int main()
         printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
         ++cnt;
 
-        if ((ret = fork()) != 0){
+        if ((ret = fork()) != 0) {
             asm volatile("mov %0, sp" : "=r"(cur_sp));
             printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
         }
-        else{
+        else {
             while (cnt < 5) {
                 asm volatile("mov %0, sp" : "=r"(cur_sp));
                 printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);

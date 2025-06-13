@@ -2,12 +2,10 @@ ENTRY(_start)
 
 v_kernel_space = 0xffff000000000000;
 
-MEMORY
-{
+MEMORY {
   KERNEL(rwx) : ORIGIN = v_kernel_space + 0x80000, LENGTH = 512K
 }
-SECTIONS
-{
+SECTIONS {
   .text ALIGN(8): { 
     _stext = .;
     KEEP(*(.text._start))

@@ -1,7 +1,6 @@
 #include "io.h"
 
-void uart_init()
-{
+void uart_init() {
     uint32_t data;
     // Set GPIO 14, 15 to ALT5
     data = get32(GPFSEL1);
@@ -30,28 +29,24 @@ void uart_init()
     set32(AUX_MU_CNTL_REG, 3); // enable the transmitter and receiver
 }
 
-int uart_write_char(char c)
-{
+int uart_write_char(char c) {
     while (!(get32(AUX_MU_LSR_REG) & (1 << 5))) ;
     set8(AUX_MU_IO_REG, c);
 
     return 0;
 }
 
-int uart_write_string(char *str)
- {
+int uart_write_string(char *str) {
      for (int i = 0; str[i] != '\0'; i++)
         uart_write_char(str[i]);
  
      return 0;
  }
 
-int uart_read_raw(char *str, uint32_t size)
-{
+int uart_read_raw(char *str, uint32_t size) {
     int i;
 
-    for (i = 0; i < size; i++)
-    {
+    for (i = 0; i < size; i++) {
         while (!(get32(AUX_MU_LSR_REG) & 1)) ;
         str[i] = get8(AUX_MU_IO_REG);
     }

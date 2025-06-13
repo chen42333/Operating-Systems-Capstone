@@ -12,8 +12,7 @@ void *ramdisk_saddr;
 void *ramdisk_eaddr;
 static int dtb_str_idx = 0;
 
-static bool initramfs_process_node(void *p, char *name, char *path, void **addr_ptr)
-{
+static bool initramfs_process_node(void *p, char *name, char *path, void **addr_ptr) {
     struct fdt_node_comp *ptr = (struct fdt_node_comp*)p;
     int i;
     bool last = false;
@@ -55,22 +54,19 @@ static bool initramfs_process_node(void *p, char *name, char *path, void **addr_
     return false;
 }
 
-bool initramfs_start(void *p, char *name)
-{
+bool initramfs_start(void *p, char *name) {
     char path[] = INITRD_START_DTB_PATH;
 
     return initramfs_process_node(p, name, path, &ramdisk_saddr);
 }
 
-bool initramfs_end(void *p, char *name)
-{
+bool initramfs_end(void *p, char *name) {
     char path[] = INITRD_END_DTB_PATH;
 
     return initramfs_process_node(p, name, path, &ramdisk_eaddr);
 }
 
-static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t path_size, uint32_t file_size)
-{
+static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t path_size, uint32_t file_size) {
     struct strtok_ctx *ctx;
     char *component = strtok_r(path, "/", &ctx);
     struct vnode *cur, *parent = NULL;
@@ -112,8 +108,7 @@ static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t p
     free(ctx);
 }
 
-static void initramfs_parse_cpio(struct mount *mnt)
-{
+static void initramfs_parse_cpio(struct mount *mnt) {
     void *addr = ramdisk_saddr;
 
     while (true)
@@ -148,8 +143,7 @@ cont:
     }
 }
 
-static int initramfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component)
-{
+static int initramfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component) {
     if (!(mount->root->v_ops = malloc(sizeof(struct vnode_operations))))
         return -1;
     if (!(mount->root->f_ops = malloc(sizeof(struct file_operations))))
@@ -183,8 +177,7 @@ static int initramfs_setup_mount(struct filesystem *fs, struct mount *mount, str
     return 0;
 }
 
-void initramfs_init()
-{
+void initramfs_init() {
     struct vnode *node;
     struct filesystem *initramfs = malloc(sizeof(struct filesystem));
 

@@ -1,10 +1,8 @@
 ENTRY(main)
-MEMORY
-{
+MEMORY {
   MEM(rwx) : ORIGIN = 0x110000, LENGTH = 128K
 }
-SECTIONS
-{
+SECTIONS {
   .text ALIGN(8): { 
     _stext = .;
     KEEP(*(.text._start))

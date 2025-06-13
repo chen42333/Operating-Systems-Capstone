@@ -1,8 +1,7 @@
 #include "tmpfs.h"
 #include "mem.h"
 
-static bool vfs_tree_child(void *ptr, void *data)
-{
+static bool vfs_tree_child(void *ptr, void *data) {
     struct vnode *node = ptr;
 
     if (node->hidden)
@@ -11,8 +10,7 @@ static bool vfs_tree_child(void *ptr, void *data)
     return strcmp(node->name, (char*)data) == 0;
 }
 
-long tmpfs_write(struct file *file, const void *buf, size_t len)
-{
+long tmpfs_write(struct file *file, const void *buf, size_t len) {
     size_t write_sz = (file->f_pos + len > MAX_FILE_SZ) ? MAX_FILE_SZ - file->f_pos : len;
 
     if (file->f_pos + write_sz > file->vnode->file_size)
@@ -24,8 +22,7 @@ long tmpfs_write(struct file *file, const void *buf, size_t len)
     return write_sz;
 }
 
-long tmpfs_read(struct file *file, void *buf, size_t len)
-{
+long tmpfs_read(struct file *file, void *buf, size_t len) {
     void *s = file->vnode->content + file->f_pos;
     size_t read_sz = (len < file->vnode->file_size - file->f_pos) ? len : file->vnode->file_size - file->f_pos;
 
@@ -35,8 +32,7 @@ long tmpfs_read(struct file *file, void *buf, size_t len)
     return read_sz;
 }
 
-int tmpfs_open(struct vnode *file_node, int flags, struct file **target)
-{
+int tmpfs_open(struct vnode *file_node, int flags, struct file **target) {
     struct file *f;
 
     if (!(f = malloc(sizeof(struct file))))
@@ -53,15 +49,13 @@ int tmpfs_open(struct vnode *file_node, int flags, struct file **target)
     return 0;
 }
 
-int tmpfs_close(struct file *file)
-{
+int tmpfs_close(struct file *file) {
     if (--file->ref_count == 0)
         free(file);
     return 0;
 }
 
-long tmpfs_lseek64(struct file *file, long offset, int whence)
-{
+long tmpfs_lseek64(struct file *file, long offset, int whence) {
     switch (whence)
     {
         case SEEK_SET:
@@ -96,15 +90,13 @@ long tmpfs_lseek64(struct file *file, long offset, int whence)
     return 0;
 }
 
-int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name)
-{
+int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name) {
     *target = (struct vnode*)list_find(&dir_node->children, vfs_tree_child, (void*)component_name);
     
     return 0;
 }
 
-int tmpfs_init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const char *component_name)
-{
+int tmpfs_init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const char *component_name) {
     if (!node)
     {
         err("Failed to allocate vnode\r\n");
@@ -130,22 +122,19 @@ int tmpfs_init_vnode(struct vnode *dir_node, struct vnode *node, file_type type,
     return 0;
 }
 
-int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name, file_type type)
-{
+int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name, file_type type) {
     *target = malloc(sizeof(struct vnode));
 
     return tmpfs_init_vnode(dir_node, *target, type, component_name);
 }
 
-int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name)
-{
+int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name) {
     *target = malloc(sizeof(struct vnode));
 
     return tmpfs_init_vnode(dir_node, *target, DIR, component_name);
 }
 
-int tmpfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component)
-{
+int tmpfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component) {
     if (!(mount->root->v_ops = malloc(sizeof(struct vnode_operations))))
         return -1;
     if (!(mount->root->f_ops = malloc(sizeof(struct file_operations))))
@@ -177,8 +166,7 @@ int tmpfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *
     return 0;
 }
 
-void tmpfs_init()
-{
+void tmpfs_init() {
     struct filesystem *tmpfs = malloc(sizeof(struct filesystem));
 
     if (!tmpfs)

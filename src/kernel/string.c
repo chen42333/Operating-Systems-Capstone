@@ -1,13 +1,11 @@
 #include "string.h"
 #include "mem.h"
 
-int strcmp(const char *str1, const char *str2)
-{
+int strcmp(const char *str1, const char *str2) {
     return strncmp(str1, str2, ~0);
 }
 
-int strncmp(const char *str1, const char *str2, size_t count)
-{
+int strncmp(const char *str1, const char *str2, size_t count) {
     for (int i = 0; i < count; i++)
     {
         if (str1[i] < str2[i])
@@ -20,8 +18,7 @@ int strncmp(const char *str1, const char *str2, size_t count)
     return 0;
 }
 
-uint32_t hstr2u32(char *hstr, int size)
-{
+uint32_t hstr2u32(char *hstr, int size) {
     uint32_t ret = 0;
 
     for (int i = 0; i < size; i++)    
@@ -41,8 +38,7 @@ uint32_t hstr2u32(char *hstr, int size)
     return ret;
 }
 
-uint32_t str2u32(char *str, int size)
-{
+uint32_t str2u32(char *str, int size) {
     uint32_t ret = 0;
 
     for (int i = 0; i < size; i++)    
@@ -58,13 +54,11 @@ uint32_t str2u32(char *str, int size)
     return ret;
 }
 
-void strcpy(char *dst, const char *src)
-{
+void strcpy(char *dst, const char *src) {
     strncpy(dst, src, ~0);
 }
 
-void strncpy(char *dst, const char *src, size_t count)
-{
+void strncpy(char *dst, const char *src, size_t count) {
     volatile char *d = dst;
     volatile const char *s = src;
 
@@ -74,8 +68,7 @@ void strncpy(char *dst, const char *src, size_t count)
     *d = '\0';
 }
 
-char* strtok_r(char *str, char *delim, struct strtok_ctx **ctx_ptr)
-{
+char* strtok_r(char *str, char *delim, struct strtok_ctx **ctx_ptr) {
     struct strtok_ctx *ctx;
 
     // Initialize

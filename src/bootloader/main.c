@@ -4,12 +4,10 @@
 
 extern char _skernel[];
 
-int main(void *_dtb_addr)
-{
+int main(void *_dtb_addr) {
     uart_init();
     
-    while (true)
-    {
+    while (true) {
         char buf[4];
         uint32_t magic, data_len, checksum;
         uint32_t sum = 0;
@@ -32,8 +30,7 @@ int main(void *_dtb_addr)
             uart_write_string("Invalid file\r\n");
         else if (sum != checksum)
             uart_write_string("File corrupted\r\n");
-        else
-        {
+        else {
             uart_write_string("File received\r\n");
             asm volatile ("mov x0, %0" :: "r"(_dtb_addr));
             asm volatile ("b _skernel");

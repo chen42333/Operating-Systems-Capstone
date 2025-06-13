@@ -7,8 +7,7 @@
 void *fb_addr; // Physical address
 struct framebuffer_info fb_info = { 1024, 768, 4096, 1 };
 
-int mbox_call(unsigned char channel, uint32_t *mailbox)
-{
+int mbox_call(unsigned char channel, uint32_t *mailbox) {
     uint32_t *p_mbox = v2p_trans((void*)mailbox, NULL);
     uint32_t *v_mbox = p2v_trans_kernel(p_mbox);
     uint32_t data = ((unsigned long)p_mbox & ~0xf) | channel;
@@ -20,14 +19,11 @@ int mbox_call(unsigned char channel, uint32_t *mailbox)
 
     // Check whether the caller is a user process
     // Check whether it contains frame buffer allocation request, to translate the buffer addr for user process
-    if (get_current() && v_mbox[1] == REQUEST_SUCCEED)
-    {
+    if (get_current() && v_mbox[1] == REQUEST_SUCCEED) {
         int idx = 2;
         
-        while (v_mbox[idx] != END_TAG)
-        {
-            if (v_mbox[idx++] == ALLOC_FRAMEBUF && (v_mbox[idx + 1] & (1UL << 31)))
-            {    
+        while (v_mbox[idx] != END_TAG) {
+            if (v_mbox[idx++] == ALLOC_FRAMEBUF && (v_mbox[idx + 1] & (1UL << 31))) {    
                 size_t s_page_idx, e_page_idx, num_pages;
                 void *ttbr;
 
@@ -56,8 +52,7 @@ int mbox_call(unsigned char channel, uint32_t *mailbox)
     return false;
 }
 
-static void mailbox_request(int n_buf, uint32_t tag, unsigned char channel, uint32_t *data)
-{
+static void mailbox_request(int n_buf, uint32_t tag, unsigned char channel, uint32_t *data) {
     int n = n_buf + 6;
     __attribute__((aligned(16))) uint32_t mailbox[n];
     mailbox[0] = n * 4; // buffer size in bytes
@@ -75,8 +70,7 @@ static void mailbox_request(int n_buf, uint32_t tag, unsigned char channel, uint
         data[i] = mailbox[5 + i];
 }
 
-static void get_board_revision()
-{
+static void get_board_revision() {
     int n_buf = 1;
     uint32_t data[n_buf];
     mailbox_request(n_buf, GET_BOARD_REVISION, MBOX_CH_PROP, data);
@@ -84,8 +78,7 @@ static void get_board_revision()
     printf("Board revision: 0x%x\r\n", data[0]);
 }
 
-static void get_memory_info()
-{
+static void get_memory_info() {
     int n_buf = 2;
     uint32_t data[n_buf];
     mailbox_request(n_buf, GET_ARM_MEMORY, MBOX_CH_PROP, data);
@@ -94,16 +87,14 @@ static void get_memory_info()
     printf("ARM memory size: 0x%x\r\n", data[1]);
 }
 
-void mailbox_info()
-{
+void mailbox_info() {
     printf("Mailbox info:\r\n");
     get_board_revision();
     get_memory_info();
     return;
 }
 
-void get_fb(size_t *size)
-{
+void get_fb(size_t *size) {
     unsigned int __attribute__((aligned(16))) mbox[36];
 
     mbox[0] = 35 * 4;
@@ -152,8 +143,7 @@ void get_fb(size_t *size)
 
     // this might not return exactly what we asked for, could be
     // the closest supported resolution instead
-    if (mbox_call(MBOX_CH_PROP, mbox) && mbox[20] == 32 && mbox[28] != 0) 
-    {
+    if (mbox_call(MBOX_CH_PROP, mbox) && mbox[20] == 32 && mbox[28] != 0) {
         mbox[28] &= 0x3FFFFFFF;         // convert GPU address to ARM address
         fb_info.width = mbox[5];        // get actual physical width
         fb_info.height = mbox[6];       // get actual physical height

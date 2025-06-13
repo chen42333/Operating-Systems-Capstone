@@ -61,15 +61,13 @@ struct vnode;
 struct filesystem;
 struct file;
 
-struct mount 
-{
+struct mount {
     struct vnode *root;
     struct filesystem *fs;
     unsigned flags;
 };
   
-struct file_operations 
-{
+struct file_operations {
     long (*write)(struct file *file, const void *buf, size_t len);
     long (*read)(struct file *file, void *buf, size_t len);
     int (*open)(struct vnode *file_node, int flags, struct file **target);
@@ -78,15 +76,13 @@ struct file_operations
     int (*ioctl)(struct file *file, unsigned long request, void *data);
 };
   
-struct vnode_operations 
-{
+struct vnode_operations {
     int (*lookup)(struct vnode *dir_node, struct vnode **target, const char *component_name);
     int (*create)(struct vnode *dir_node, struct vnode **target, const char *component_name, file_type type);
     int (*mkdir)(struct vnode *dir_node, struct vnode **target, const char *component_name);
 };
 
-struct vnode 
-{
+struct vnode {
     struct mount *mount;
     struct vnode_operations *v_ops;
     struct file_operations *f_ops;
@@ -100,16 +96,14 @@ struct vnode
     char *content;
 };
 
-struct filesystem 
-{
+struct filesystem {
     const char *name;
     int (*setup_mount)(struct filesystem *fs, struct mount *mount, 
                         struct vnode *dir_node, const char *component);
 };
 
 // file handle
-struct file 
-{
+struct file {
     struct vnode *vnode;
     size_t f_pos;  // RW position of this file handle
     struct file_operations *f_ops;
