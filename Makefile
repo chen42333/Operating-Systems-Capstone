@@ -7,7 +7,8 @@ LDFLAGS = -m aarch64elf
 OBJCPY = llvm-objcopy
 OBJCPYFLAGS = --output-target=aarch64-rpi3-elf -O binary
 QEMU = qemu-system-aarch64
-QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -serial null -initrd $(RAMDISK) -dtb $(DEVICE_TREE)
+QEMUFLAGS = -M raspi3b -kernel $(TARGET_FILE) -serial null \
+			-initrd $(RAMDISK) -dtb $(DEVICE_TREE) -drive if=sd,file=$(DISK_IMG),format=raw
 _QEMUFLAGS = 
 QEMUFLAGS += $(_QEMUFLAGS)
 
@@ -35,9 +36,10 @@ OBJS = $(SRCS:.c=.o)
 OBJS := $(OBJS:.S=.o)
 DEPS = $(OBJS:.o=.d)
 LDFILE = $(SRC_DIR)/$(TARGET)/linker.ld
-PROGS = *.elf *.img
-PROGS += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
-# PROGS += $(shell find $(RAMDISK_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
+_PROGS = *.elf *.img
+_PROGS += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
+# _PROGS += $(shell find $(RAMDISK_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
+PROGS=$(echo $(_PROGS) | tr ' ' '\n' | grep -v '^nycuos\.img$' | tr '\n' ' ')
 RAMDISK_DIR = ./rootfs
 RAMDISK = initramfs.cpio
 RAMDISK_FILES = $(shell find $(RAMDISK_DIR) -type f ! -name "*.img" )
@@ -46,10 +48,11 @@ TEST_PROG = $(TEST_PROG_DIR)/$(TEST_PROG_NAME)
 TEST_PROG_SRCS = $(shell find $(TEST_PROG_DIR) -type f \( -name "*.c" -o -name "*.S" \) | grep $(TEST_PROG_NAME))
 TEST_PROG_LDFILE = $(TEST_PROG_DIR)/linker.ld
 DEVICE_TREE = bcm2710-rpi-3-b-plus.dtb
+DISK_IMG = sd.dmg
+
 JUNK = $(shell find . -type f \( -name "*.o" -o -name "*.d" \))
 JUNK += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.o" -o -name "*.d" \))
-JUNK += $(PROGS)
-JUNK += $(RAMDISK)
+JUNK += $(PROGS) $(RAMDISK) $(DISK_IMG)
 
 CFLAGS += -Iinclude/$(TARGET)
 
@@ -61,19 +64,19 @@ kernel: $(TARGET_FILE) $(RAMDISK)
 
 bootloader: $(TARGET_FILE)
 
-test: $(TARGET_FILE) $(RAMDISK)
+test: $(TARGET_FILE) $(RAMDISK) $(DISK_IMG)
 	$(QEMU) $(QEMUFLAGS) -serial stdio
 
-debug: $(TARGET_FILE) $(RAMDISK)
+debug: $(TARGET_FILE) $(RAMDISK) $(DISK_IMG)
 	$(QEMU) $(QEMUFLAGS) -serial stdio -S -s
 
-test-pty: $(TARGET_FILE) $(RAMDISK)
+test-pty: $(TARGET_FILE) $(RAMDISK) $(DISK_IMG)
 	$(QEMU) $(QEMUFLAGS) -serial pty
 	
-test-asm: $(TARGET_FILE) $(RAMDISK)
+test-asm: $(TARGET_FILE) $(RAMDISK) $(DISK_IMG)
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d in_asm
 
-test-int: $(TARGET_FILE) $(RAMDISK)
+test-int: $(TARGET_FILE) $(RAMDISK) $(DISK_IMG)
 	$(QEMU) $(QEMUFLAGS) -serial stdio -d int
 
 $(RAMDISK): $(RAMDISK_FILES) $(TEST_PROG).img
@@ -84,6 +87,10 @@ $(TEST_PROG).img: $(TEST_PROG_SRCS)
 	$(LD) $(LDFLAGS) -T $(TEST_PROG_LDFILE) -o $(TEST_PROG).elf $(TEST_PROG).o
 	$(OBJCPY) $(OBJCPYFLAGS) $(TEST_PROG).elf $@
 	cp $@ $(RAMDISK_DIR)
+
+$(DISK_IMG): 
+	chmod +x sd_dmg.sh
+	./sd_dmg.sh $(DISK_IMG)
 
 %.img: %.elf
 	$(OBJCPY) $(OBJCPYFLAGS) $< $@

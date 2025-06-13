@@ -10,10 +10,6 @@ brew install llvm qemu python3 pyserial
 ```
 diskutil list # MacOS
 ```
-or
-```
-lsblk -f # Linux
-```
 - Run the script
 ```
 chmod +x disk.sh

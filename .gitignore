@@ -56,6 +56,7 @@ dkms.conf
 !syscall.img
 !vm.img
 !vfs1.img
+*.dmg
 *.cpio
 .vscode/
 .DS_Store
