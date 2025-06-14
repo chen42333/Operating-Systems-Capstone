@@ -12,8 +12,7 @@ void signal_kill(int pid, int signo) {
     struct pcb_t *pcb  = pcb_table[pid];
     int *signo_ptr;
 
-    if (!pcb)
-    {
+    if (!pcb) {
         err("No such process\r\n");
         return;
     }

@@ -37,10 +37,8 @@ void* simple_malloc(size_t size) {
     size_t align_padding = 0;
 
     // Do the alignment according to the size
-    for (size_t i = (1 << 3); i >= 1; i >>= 1)
-    {
-        if (size % i == 0)
-        {
+    for (size_t i = (1 << 3); i >= 1; i >>= 1) {
+        if (size % i == 0) {
             if ((size_t)heap_ptr % i != 0)
                 align_padding = i - ((size_t)heap_ptr % i);
             break;
@@ -49,8 +47,7 @@ void* simple_malloc(size_t size) {
 
     ret = heap_ptr + align_padding;
     
-    if ((size_t)heap_ptr + size + align_padding <= (size_t)heap_start + HEAP_SIZE)
-    {
+    if ((size_t)heap_ptr + size + align_padding <= (size_t)heap_start + HEAP_SIZE) {
         heap_ptr += (size + align_padding);
         return ret;
     }
@@ -93,8 +90,7 @@ static void buddy_delete_free_block(int idx, int list_idx) {
 
     struct buddy_node *node_ptr = &buddy_node_arr[idx];
 
-    if (buddy_data.arr[idx] != list_idx)
-    {
+    if (buddy_data.arr[idx] != list_idx) {
         enable_int();
         err("Node not found\r\n");
         return;
@@ -150,8 +146,7 @@ void buddy_init() {
 
     int_ptr = PAGE_SIZE;
     buddy_data.num_pages_exp = 0;
-    while (int_ptr < (size_t)usable_memory[1])
-    {
+    while (int_ptr < (size_t)usable_memory[1]) {
         int_ptr <<= 1;
         buddy_data.num_pages_exp++;
     }
@@ -159,8 +154,7 @@ void buddy_init() {
     buddy_data.end = (void*)int_ptr;
 
     buddy_node_arr = simple_malloc((1 << buddy_data.num_pages_exp) * sizeof(struct buddy_node));
-    for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
-    {
+    for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++) {
         buddy_node_arr[i].idx = i;
         buddy_node_arr[i].prev = NULL;
         buddy_node_arr[i].next = NULL;
@@ -180,8 +174,7 @@ void buddy_init() {
 static void buddy_cut_block(int idx, int block_size_exp, uint32_t required_size) {
     disable_int();
 
-    if (block_size_exp == 0 || (1 << (block_size_exp - 1)) < required_size)
-    {
+    if (block_size_exp == 0 || (1 << (block_size_exp - 1)) < required_size) {
 #ifdef TEST_MEM
         log("require %u pages, allocate %u pages from index 0x%x\r\n", required_size, 1 << block_size_exp, idx);
 #endif
@@ -207,16 +200,13 @@ void* buddy_malloc(uint32_t size /* The unit is PAGE_SIZE */) {
 
     int list_idx = 0, idx;
 
-    if (size == 0)
-    {
+    if (size == 0) {
         enable_int();
         return NULL;
     }
 
-    while ((1 << list_idx) < size || buddy_list_empty(list_idx))
-    {
-        if (++list_idx > buddy_data.num_pages_exp)
-        {
+    while ((1 << list_idx) < size || buddy_list_empty(list_idx)) {
+        if (++list_idx > buddy_data.num_pages_exp) {
             enable_int();
             printf("No enough space\r\n");
             return NULL;
@@ -242,8 +232,7 @@ static void buddy_merge_block(int idx, int block_size_exp) {
 
     int buddy_idx, big_idx, small_idx;
 
-    if (block_size_exp == buddy_data.num_pages_exp)
-    {
+    if (block_size_exp == buddy_data.num_pages_exp) {
         enable_int();
         return;
     }
@@ -253,8 +242,7 @@ static void buddy_merge_block(int idx, int block_size_exp) {
     else 
         buddy_idx = idx - (1 << block_size_exp);
     
-    if (buddy_data.arr[buddy_idx] != block_size_exp)
-    {
+    if (buddy_data.arr[buddy_idx] != block_size_exp) {
         enable_int();
         return;
     }
@@ -281,8 +269,7 @@ void buddy_free(void *ptr) {
 
     int idx, list_idx;
     
-    if (ptr >= buddy_data.end || (uintptr_t)ptr & (PAGE_SIZE - 1))
-    {
+    if (ptr >= buddy_data.end || (uintptr_t)ptr & (PAGE_SIZE - 1)) {
         enable_int();
         printf("Invalid pointer\r\n");
         return;
@@ -290,14 +277,12 @@ void buddy_free(void *ptr) {
 
     idx = (size_t)ptr / PAGE_SIZE;
 
-    if (buddy_data.arr[idx] >= 0)
-    {
+    if (buddy_data.arr[idx] >= 0) {
         enable_int();
         printf("The page is not in use\r\n");
         return;
     }
-    else if (buddy_data.arr[idx] == EMPTY)
-    {   
+    else if (buddy_data.arr[idx] == EMPTY) {   
         enable_int();
         printf("Not start of a block\r\n");
         return;
@@ -318,8 +303,7 @@ void buddy_free(void *ptr) {
 static void buddy_clear_block(int idx, int block_size_exp) {
     int buddy_idx;
 
-    if (idx % (1 << block_size_exp) != 0)
-    {
+    if (idx % (1 << block_size_exp) != 0) {
         err("The index is not aligned with the block size\r\n");
         return;
     }
@@ -328,8 +312,7 @@ static void buddy_clear_block(int idx, int block_size_exp) {
         return;
 
     if ((buddy_data.arr[idx] != NEG_ZERO && buddy_data.arr[idx] <= -block_size_exp)
-         || (buddy_data.arr[idx] == NEG_ZERO && block_size_exp == 0))
-    {
+         || (buddy_data.arr[idx] == NEG_ZERO && block_size_exp == 0)) {
         buddy_insert_free_block(idx, block_size_exp);
         return;
     }  
@@ -356,8 +339,7 @@ void memory_reserve(void *start, void *end) {
 #endif
 
     // Mark the region as allocated
-    for (size_t i = PAGE_SIZE; ; i <<= 1, reserve_len_exp++) // i stands for size of the smallest block that can cover the whole region
-    {
+    for (size_t i = PAGE_SIZE; ; i <<= 1, reserve_len_exp++) { // i stands for size of the smallest block that can cover the whole region
         void *block_start, *block_end;
 
         if (i < size)
@@ -391,10 +373,8 @@ void memory_reserve(void *start, void *end) {
 
     if (buddy_data.arr[parent_idx] <= -reserve_len_exp && buddy_data.arr[parent_idx] != NEG_ZERO) // The block has been coverd by the other reserved block
         return;
-    else if (buddy_data.arr[parent_idx] >= reserve_len_exp) // No overlapping
-    {
-        for (int i = buddy_data.arr[parent_idx]; i > reserve_len_exp; i--)
-        {
+    else if (buddy_data.arr[parent_idx] >= reserve_len_exp) { // No overlapping
+        for (int i = buddy_data.arr[parent_idx]; i > reserve_len_exp; i--) {
             int idx1 = parent_idx, idx2 = parent_idx + (1 << (i - 1));
 
             buddy_delete_free_block(parent_idx, i);
@@ -406,8 +386,7 @@ void memory_reserve(void *start, void *end) {
 
         buddy_delete_free_block(idx, reserve_len_exp);
     }
-    else // The block covers the other block(s), and parent_idx will be equal to idx
-    {
+    else { // The block covers the other block(s), and parent_idx will be equal to idx
         buddy_clear_block(idx, reserve_len_exp); // Clear the overlapped blocks first
         buddy_delete_free_block(idx, reserve_len_exp);
     }
@@ -439,8 +418,7 @@ void dynamic_allocator_init() {
         mem_pool[i] = NULL;
 
     dynamic_node_arr = simple_malloc((1 << buddy_data.num_pages_exp) * sizeof(struct dynamic_node));
-    for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++)
-    {
+    for (int i = 0; i < (1 << buddy_data.num_pages_exp); i++) {
         dynamic_node_arr[i].addr = (void*)(PAGE_SIZE * i);
         dynamic_node_arr[i].chunk_size = PAGE_SIZE;
         dynamic_node_arr[i].sum = 0;
@@ -458,13 +436,11 @@ void* malloc(size_t size) {
     struct dynamic_node *prev = NULL, *cur, *node_ptr;
     void *addr;
 
-    if (size == 0)
-    {
+    if (size == 0) {
         enable_int();
         return NULL;
     }
-    if (size >= PAGE_SIZE)
-    {
+    if (size >= PAGE_SIZE) {
         void *ret = buddy_malloc((size - 1) / PAGE_SIZE + 1);
         enable_int();
         return p2v_trans_kernel(ret);
@@ -472,8 +448,7 @@ void* malloc(size_t size) {
     
     for (size_t i = 1; i < size; i <<= 1, size_exp++) ;
 
-    if (size_exp > MAX_POOL_SIZE_EXP)
-    {
+    if (size_exp > MAX_POOL_SIZE_EXP) {
         void *ret = buddy_malloc(1);
         enable_int();
         return p2v_trans_kernel(ret);
@@ -483,16 +458,13 @@ void* malloc(size_t size) {
 
     cur = mem_pool[size_exp - MIN_POOL_SIZE_EXP];
 
-    while (cur != NULL)
-    {
+    while (cur != NULL) {
         int num_chunks = PAGE_SIZE / (1 << size_exp);
-        for (int i = (cur->cur_idx + 1) % num_chunks; ; i = (i + 1) % num_chunks)
-        {
+        for (int i = (cur->cur_idx + 1) % num_chunks; ; i = (i + 1) % num_chunks) {
             int bitmap_arr_idx = i / 64;
             int bitmap_element_idx = i % 64;
 
-            if (cur->bitmap[bitmap_arr_idx] & (1 << bitmap_element_idx)) // The chunk is allocated
-            {
+            if (cur->bitmap[bitmap_arr_idx] & (1 << bitmap_element_idx)) { // The chunk is allocated
                 if (i == cur->cur_idx) // It has looped through the chunks
                     break;
                 continue;
@@ -554,15 +526,13 @@ void free(void *vptr) {
     page_idx = (size_t)ptr / PAGE_SIZE;
     node_ptr = &dynamic_node_arr[page_idx];
 
-    if (ptr >= buddy_data.end)
-    {
+    if (ptr >= buddy_data.end) {
         enable_int();
         printf("Invalid pointer\r\n");
         return;
     }
 
-    if (node_ptr->chunk_size == PAGE_SIZE)
-    {
+    if (node_ptr->chunk_size == PAGE_SIZE) {
         buddy_free(ptr);
         enable_int();
         return;
@@ -570,8 +540,7 @@ void free(void *vptr) {
 
     chunk_idx = (vptr - node_ptr->addr) / node_ptr->chunk_size;
 
-    if (!(node_ptr->bitmap[chunk_idx / 64] & (1 << (chunk_idx % 64))))
-    {
+    if (!(node_ptr->bitmap[chunk_idx / 64] & (1 << (chunk_idx % 64)))) {
         enable_int();
         printf("The chunk is not in use\r\n");
         return;
@@ -584,16 +553,14 @@ void free(void *vptr) {
     log("free %d bytes from 0x%x\r\n", node_ptr->chunk_size, vptr);
 #endif
 
-    if (node_ptr->sum == 0) // The pageframe can be freed
-    {
+    if (node_ptr->sum == 0) { // The pageframe can be freed
         struct dynamic_node *prev = NULL, *cur;
         int size_exp = -1;
 
         for (size_t size = node_ptr->chunk_size; size > 0; size_exp++, size >>= 1) ;
 
         cur = mem_pool[size_exp - MIN_POOL_SIZE_EXP];
-        while (cur != node_ptr)
-        {
+        while (cur != node_ptr) {
            prev = cur;
            cur = cur->next;
         }
@@ -635,8 +602,7 @@ bool mem_region(void *p, char *name) {
     bool last = false;
     char path[] = USABLE_MEM_DTB_PATH;
 
-    if (big2host(ptr->token) == FDT_END)
-    {
+    if (big2host(ptr->token) == FDT_END) {
         dtb_str_idx = 0;
         return false;
     }
@@ -646,21 +612,17 @@ bool mem_region(void *p, char *name) {
     if (dtb_str_idx == 0 && path[dtb_str_idx] == '/')
         dtb_str_idx++;
     
-    for (i = dtb_str_idx; path[i] != '/'; i++)
-    {
-        if (path[i] == '\0')
-        {
+    for (i = dtb_str_idx; path[i] != '/'; i++) {
+        if (path[i] == '\0') {
             last = true;
             break;
         }
     }
     path[i] = '\0';
 
-    if (!strcmp(&path[dtb_str_idx], name))
-    {
+    if (!strcmp(&path[dtb_str_idx], name)) {
         dtb_str_idx = i + 1;
-        if (last)
-        {
+        if (last) {
             uint32_t start = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop)));
             uint32_t end = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop) + sizeof(uint32_t)));
 
@@ -686,8 +648,7 @@ void set_w_permission(void *ptr, bool w) {
     disable_int();
 
     size_t idx = (size_t)ptr / PAGE_SIZE;
-    if ((size_t)ptr % PAGE_SIZE)
-    {
+    if ((size_t)ptr % PAGE_SIZE) {
         printf("Not start of a page\r\n");
         enable_int();
         return;
@@ -703,8 +664,7 @@ bool get_w_permission(void *ptr) {
 
     bool ret = false;
     size_t idx = (size_t)ptr / PAGE_SIZE;
-    if ((size_t)ptr % PAGE_SIZE)
-    {
+    if ((size_t)ptr % PAGE_SIZE) {
         printf("Not start of a page\r\n");
         enable_int();
         return ret;
@@ -722,8 +682,7 @@ uint16_t get_ref_count(void *ptr) {
 
     uint16_t ret = ~0;
     size_t idx = (size_t)ptr / PAGE_SIZE;
-    if ((size_t)ptr % PAGE_SIZE)
-    {
+    if ((size_t)ptr % PAGE_SIZE) {
         printf("Not start of a page\r\n");
         enable_int();
         return ret;
@@ -740,8 +699,7 @@ void ref_page(void *ptr) {
     disable_int();
 
     size_t idx = (size_t)ptr / PAGE_SIZE;
-    if ((size_t)ptr % PAGE_SIZE)
-    {
+    if ((size_t)ptr % PAGE_SIZE) {
         printf("Not start of a page\r\n");
         enable_int();
         return;
@@ -756,15 +714,13 @@ void deref_page(void *ptr) {
 
     size_t idx = (size_t)ptr / PAGE_SIZE;
 
-    if ((size_t)ptr % PAGE_SIZE)
-    {
+    if ((size_t)ptr % PAGE_SIZE) {
         printf("Not start of a page\r\n");
         enable_int();
         return;
     }
 
-    if (usr_pages[idx].ref_count > 0 && --usr_pages[idx].ref_count == 0)
-    {
+    if (usr_pages[idx].ref_count > 0 && --usr_pages[idx].ref_count == 0) {
         usr_pages[idx].w_permission = false;
         if (buddy_data.arr[idx] < 0 || buddy_data.arr[idx] == NEG_ZERO) // The page is a start of a used block
             buddy_free(ptr);

@@ -6,8 +6,7 @@ void ring_buf_produce(struct ring_buf *rb, void *data, buf_type type) {
 
     disable_int();
 
-    switch (type)
-    {
+    switch (type) {
         case CHAR:
             ((char*)rb->buf)[rb->producer_idx++] = *(char*)data;
             break;
@@ -31,8 +30,7 @@ void ring_buf_consume(struct ring_buf *rb, void *ret, buf_type type) {
 
     disable_int();
 
-    switch (type)
-    {
+    switch (type) {
         case CHAR:
             *(char*)ret = ((char*)rb->buf)[rb->consumer_idx++];
             break;

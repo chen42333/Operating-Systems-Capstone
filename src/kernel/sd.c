@@ -140,7 +140,7 @@ void writeblock(int block_idx, void* buf) {
   if (!is_hcs) {
     block_idx <<= 9;
   }
-  do{
+  do {
     set_block(512, 1);
     sd_cmd(WRITE_SINGLE_BLOCK | SDHOST_WRITE, block_idx);
     for (int i = 0; i < 128; ++i) {

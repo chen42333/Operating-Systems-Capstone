@@ -6,8 +6,7 @@ int strcmp(const char *str1, const char *str2) {
 }
 
 int strncmp(const char *str1, const char *str2, size_t count) {
-    for (int i = 0; i < count; i++)
-    {
+    for (int i = 0; i < count; i++) {
         if (str1[i] < str2[i])
             return -1;
         if (str1[i] > str2[i])
@@ -21,8 +20,7 @@ int strncmp(const char *str1, const char *str2, size_t count) {
 uint32_t hstr2u32(char *hstr, int size) {
     uint32_t ret = 0;
 
-    for (int i = 0; i < size; i++)    
-    {
+    for (int i = 0; i < size; i++) {
         ret <<= 4;
 
         if (hstr[i] >= '0' && hstr[i] <= '9')
@@ -41,8 +39,7 @@ uint32_t hstr2u32(char *hstr, int size) {
 uint32_t str2u32(char *str, int size) {
     uint32_t ret = 0;
 
-    for (int i = 0; i < size; i++)    
-    {
+    for (int i = 0; i < size; i++) {
         ret *= 10;
 
         if (str[i] >= '0' && str[i] <= '9')
@@ -72,8 +69,7 @@ char* strtok_r(char *str, char *delim, struct strtok_ctx **ctx_ptr) {
     struct strtok_ctx *ctx;
 
     // Initialize
-    if (str != NULL)
-    {
+    if (str != NULL) {
         if (!(*ctx_ptr = malloc(sizeof(struct strtok_ctx))))
             return NULL;
 
@@ -85,12 +81,9 @@ char* strtok_r(char *str, char *delim, struct strtok_ctx **ctx_ptr) {
     else 
         ctx = *ctx_ptr;
 
-    for (int i = ctx->strtok_idx; i < ctx->strtok_len; i++)
-    {
-        for (int j = 0; j <= strlen(delim); j++)
-        {
-            if (ctx->strtok_str[i] == delim[j])
-            {
+    for (int i = ctx->strtok_idx; i < ctx->strtok_len; i++) {
+        for (int j = 0; j <= strlen(delim); j++) {
+            if (ctx->strtok_str[i] == delim[j]) {
                 int idx = ctx->strtok_idx;
 
                 ctx->strtok_str[i] = '\0';

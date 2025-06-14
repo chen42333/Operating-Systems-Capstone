@@ -56,27 +56,23 @@ int tmpfs_close(struct file *file) {
 }
 
 long tmpfs_lseek64(struct file *file, long offset, int whence) {
-    switch (whence)
-    {
+    switch (whence) {
         case SEEK_SET:
-            if (offset < 0 || offset > file->vnode->file_size)
-            {
+            if (offset < 0 || offset > file->vnode->file_size) {
                 err("Invalid offset\r\n");
                 return -1;
             }
             file->f_pos = offset;
             break;
         case SEEK_CUR:
-            if (file->f_pos + offset < 0 || file->f_pos + offset > file->vnode->file_size)
-            {
+            if (file->f_pos + offset < 0 || file->f_pos + offset > file->vnode->file_size) {
                 err("Invalid offset\r\n");
                 return -1;
             }
             file->f_pos += offset;
             break;
         case SEEK_END:
-            if (offset > 0 || file->vnode->file_size + offset < 0)
-            {
+            if (offset > 0 || file->vnode->file_size + offset < 0) {
                 err("Invalid offset\r\n");
                 return -1;
             }
@@ -119,8 +115,7 @@ int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *compo
 int tmpfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component) {
     if (!(mount->root->v_ops = malloc(sizeof(struct vnode_operations))))
         return -1;
-    if (!(mount->root->f_ops = malloc(sizeof(struct file_operations))))
-    {    
+    if (!(mount->root->f_ops = malloc(sizeof(struct file_operations)))) {    
         free(mount->root->v_ops);
         return -1;
     }

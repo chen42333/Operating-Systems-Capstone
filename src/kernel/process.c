@@ -20,14 +20,11 @@ void (*default_sig_handler[_NSIG])() =  {
 };
 
 void ps() {
-    for (int i = 0; i < MAX_PROC; i++)
-    {
+    for (int i = 0; i < MAX_PROC; i++) {
         struct pcb_t *pcb = pcb_table[i];
 
-        if (pcb)
-        {
-            switch (pcb->state)
-            {
+        if (pcb) {
+            switch (pcb->state) {
                 case RUN:
                 case READY:
                     printf("%d(R) ", i);
@@ -96,10 +93,8 @@ pid_t thread_create(void (*func)(void *args), void *args) {
 
     disable_int();
 
-    for (pid = (last_pid + 1) % MAX_PROC; pcb_table[pid] != NULL; pid++)
-    {
-        if (pid == last_pid)
-        {
+    for (pid = (last_pid + 1) % MAX_PROC; pcb_table[pid] != NULL; pid++) {
+        if (pid == last_pid) {
             enable_int();
             err("Cannot create more threads\r\n");
             return -1;
@@ -147,12 +142,10 @@ void switch_to_next(struct pcb_t *prev) {
     if (next->el == 0)
         asm volatile ("msr sp_el0, %0" :: "r"(next->sp_el0));
     
-    if (list_empty(&next->signal_queue))
-    {
+    if (list_empty(&next->signal_queue)) {
         enable_int();
         switch_to(prev->reg, next->reg, next->pc, next->pstate, next->args, next->ttbr);
-    } else
-    {
+    } else {
         int *signo_ptr = list_pop(&next->signal_queue);
         int signo = *signo_ptr;
         void (*handler)() = next->sig_handler[signo];
@@ -164,8 +157,7 @@ void switch_to_next(struct pcb_t *prev) {
         memcpy(next->reg_backup, next->reg, sizeof(next->reg));
         next->sp_el0_backup = next->sp_el0;
 
-        if (handler == SIG_DFL)
-        {
+        if (handler == SIG_DFL) {
             handler = default_sig_handler[signo];
             save_regs(prev->reg, frame_ptr, &&out, stack_ptr);
             next->lr = (uint64_t)sigreturn;
@@ -231,8 +223,7 @@ void add_section(struct pcb_t *pcb, sec type, void *base, size_t len) {
 void free_sections(struct list *sections, void *ttbr) {
     struct section *s = list_pop(sections);
 
-    while (s)
-    {
+    while (s) {
         void *base = v2p_trans(s->base, ttbr);
         for (size_t i = 0; i < s->size; i += PAGE_SIZE)
             deref_page(base + i);
@@ -253,8 +244,7 @@ bool in_section(void *ptr, void *addr) {
 static void kill_zombies() {
     struct pcb_t *pcb = list_pop(&dead_queue);
 
-    while (pcb)
-    {
+    while (pcb) {
         free_sections(&pcb->sections, pcb->ttbr);
         if (pcb->el == 0)
             free_page_table(pcb->ttbr, PGD);
@@ -266,8 +256,7 @@ static void kill_zombies() {
 }
 
 void idle() {
-    while (true)
-    {
+    while (true) {
         kill_zombies();
         schedule();
     }

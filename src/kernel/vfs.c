@@ -222,14 +222,12 @@ int vfs_lookup(const char *pathname, struct vnode **target) {
 }
 
 int init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const char *component_name) {
-    if (!node)
-    {
+    if (!node) {
         err("Failed to allocate vnode\r\n");
         return -1;
     }
     
-    if (dir_node)
-    {
+    if (dir_node) {
         node->mount = dir_node->mount;
         node->f_ops = dir_node->f_ops;
         node->v_ops = dir_node->v_ops;

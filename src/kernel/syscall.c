@@ -9,8 +9,7 @@
 void syscall_entry(struct trap_frame *frame) {
     enable_int();
 
-    switch ((syscall)frame->nr_syscall)
-    {
+    switch ((syscall)frame->nr_syscall) {
         case GET_PID:
             frame->RET = (size_t)getpid();
             break;
@@ -93,8 +92,7 @@ int exec(const char *name, char *const argv[]) {
     void *prog_addr;
     size_t prog_size;
 
-    if (!(prog_addr = load_prog((char*)name, &prog_size)))
-    {
+    if (!(prog_addr = load_prog((char*)name, &prog_size))) {
         printf("File not found\r\n");
         exit();
         return -1;
@@ -102,8 +100,7 @@ int exec(const char *name, char *const argv[]) {
 
     disable_int();
 
-    if (pcb->el == 0)
-    {
+    if (pcb->el == 0) {
         free_sections(&pcb->sections, pcb->ttbr);
         free_page_table(pcb->ttbr, PGD);
     }
@@ -133,14 +130,11 @@ static bool match_pid(void *ptr, void *data) {
 static void add_ref_sections(struct list *l, void *ttbr) {
     struct node *tmp = l->head;
 
-    while (tmp)
-    {
+    while (tmp) {
         struct section *s = tmp->ptr;
 
-        if (s->type != DEVICE)
-        {
-            for (size_t i = 0; i < s->size; i += PAGE_SIZE)
-            {
+        if (s->type != DEVICE) {
+            for (size_t i = 0; i < s->size; i += PAGE_SIZE) {
                 void *ptr = v2p_trans(s->base + i, ttbr);
                 ref_page(ptr);
             }
@@ -162,17 +156,14 @@ int fork() {
     new_pcb = pcb_table[new_pid];
     new_pcb->el = pcb->el;
     new_pcb->cur_dir = pcb->cur_dir;
-    for (int i = 0; i < MAX_NUM_FD; i++)
-    {
-        if (pcb->fd_table[i])
-        {
+    for (int i = 0; i < MAX_NUM_FD; i++) {
+        if (pcb->fd_table[i]) {
             new_pcb->fd_table[i] = pcb->fd_table[i];
             pcb->fd_table[i]->ref_count++;
         }
     }
     new_pcb->fd_bitmap = pcb->fd_bitmap;
-    if (pcb->el == 0)
-    {
+    if (pcb->el == 0) {
         add_ref_sections(&pcb->sections, pcb->ttbr);
         new_pcb->code = pcb->code;
         list_copy(&new_pcb->sections, &pcb->sections);
@@ -194,8 +185,7 @@ int fork() {
     tmp = frame_ptr;
 
     // Modify all the stored fp on the stack to the new value
-    while (tmp < (void*)new_pcb->stack[1])
-    {   
+    while (tmp < (void*)new_pcb->stack[1]) {   
         void *update_fp = (void*)new_pcb->stack[1] - ((void*)pcb->stack[1] - *(void**)tmp);
 
         if (update_fp <= tmp || update_fp > (void*)new_pcb->stack[1]) // Reach the 1st frame
@@ -238,16 +228,14 @@ void exit() {
 
 void kill(pid_t pid) {
     struct pcb_t *pcb = pcb_table[pid];
-    if (!pcb)
-    {
+    if (!pcb) {
         err("No such process\r\n");
         return;
     }
 
     disable_int();
 
-    switch (pcb->state)
-    {
+    switch (pcb->state) {
         case RUN:
             enable_int();
             exit();

@@ -196,8 +196,7 @@ static long fat32_write(struct file *file, const void *buf, size_t len) {
         if (file->f_pos > file->vnode->file_size)
             file->vnode->file_size = file->f_pos;
 
-        if (write_sz < len && ++which_sec % fat32_data.BPB_SecPerClus == 0) 
-        {   
+        if (write_sz < len && ++which_sec % fat32_data.BPB_SecPerClus == 0) {   
             uint32_t tmp = clus_idx;
 
             clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK;
@@ -239,8 +238,7 @@ static long fat32_read(struct file *file, void *buf, size_t len) {
         if (file->f_pos >= file->vnode->file_size)
             break;
 
-        if (read_sz < len && ++which_sec % fat32_data.BPB_SecPerClus == 0) 
-        {
+        if (read_sz < len && ++which_sec % fat32_data.BPB_SecPerClus == 0) {
             clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK;
             if (clus_idx == fat32_data.end_of_file)
                 break;
@@ -352,8 +350,7 @@ out:
 static int fat32_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component) {
     if (!(mount->root->v_ops = malloc(sizeof(struct vnode_operations))))
         return -1;
-    if (!(mount->root->f_ops = malloc(sizeof(struct file_operations))))
-    {    
+    if (!(mount->root->f_ops = malloc(sizeof(struct file_operations)))) {    
         free(mount->root->v_ops);
         return -1;
     }

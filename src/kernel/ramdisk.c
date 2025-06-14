@@ -25,8 +25,7 @@ static bool initramfs_process_node(void *p, char *name, char *path, void **addr_
     int i;
     bool last = false;
 
-    if (big2host(ptr->token) == FDT_END)
-    {
+    if (big2host(ptr->token) == FDT_END) {
         dtb_str_idx = 0;
         return false;
     }
@@ -36,21 +35,17 @@ static bool initramfs_process_node(void *p, char *name, char *path, void **addr_
     if (dtb_str_idx == 0 && path[dtb_str_idx] == '/')
         dtb_str_idx++;
     
-    for (i = dtb_str_idx; path[i] != '/'; i++)
-    {
-        if (path[i] == '\0')
-        {
+    for (i = dtb_str_idx; path[i] != '/'; i++) {
+        if (path[i] == '\0') {
             last = true;
             break;
         }
     }
     path[i] = '\0';
 
-    if (!strcmp(&path[dtb_str_idx], name))
-    {
+    if (!strcmp(&path[dtb_str_idx], name)) {
         dtb_str_idx = i + 1;
-        if (last)
-        {
+        if (last) {
             uint32_t value = big2host(*(uint32_t*)(ptr->data + sizeof(struct fdt_node_prop)));
 
             *addr_ptr = p2v_trans_kernel((void*)(uintptr_t)value);
@@ -86,18 +81,15 @@ static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t p
     cur = mnt->root;
     parent = cur->parent;
 
-    while (skip || (component = strtok_r(NULL, "/", &ctx)) != NULL)
-    {
+    while (skip || (component = strtok_r(NULL, "/", &ctx)) != NULL) {
         if (skip)
             skip = false;
             
         parent = cur;
         mnt->root->v_ops->lookup(parent, &cur, component);
-        if (!cur)
-        {
+        if (!cur) {
             char *tmp;
-            if ((tmp = strtok_r(NULL, "/", &ctx)) != NULL) // Directory
-            {
+            if ((tmp = strtok_r(NULL, "/", &ctx)) != NULL) { // Directory
                 mnt->root->v_ops->mkdir(parent, &cur, component);
 
                 skip = true;
@@ -119,20 +111,17 @@ static void initramfs_create_recursive(struct mount *mnt, char *path, uint32_t p
 static void initramfs_parse_cpio(struct mount *mnt) {
     void *addr = ramdisk_saddr;
 
-    while (true)
-    {
+    while (true) {
         struct cpio_record *record = (struct cpio_record*)addr;
         uint32_t path_size = hstr2u32(record->hdr.c_namesize, 8);
         uint32_t file_size = hstr2u32(record->hdr.c_filesize, 8);
 
-        if (addr >= ramdisk_eaddr)
-        {
+        if (addr >= ramdisk_eaddr) {
             err("No TRAILER record\r\n");
             break;
         }
 
-        if (strncmp("070701", record->hdr.c_magic, strlen("070701")))
-        {
+        if (strncmp("070701", record->hdr.c_magic, strlen("070701"))) {
             err("Invalid .cpio record\r\n");
             goto cont;
         }
@@ -154,8 +143,7 @@ cont:
 static int initramfs_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component) {
     if (!(mount->root->v_ops = malloc(sizeof(struct vnode_operations))))
         return -1;
-    if (!(mount->root->f_ops = malloc(sizeof(struct file_operations))))
-    {    
+    if (!(mount->root->f_ops = malloc(sizeof(struct file_operations)))) {    
         free(mount->root->v_ops);
         return -1;
     }
