@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TMP_DIR="./.tmp"
-TMP_VOL="TMP_VOL"
+TMP_VOL="OSC_SD_VOL"
 
 if [ $(basename ${1} .dmg) = ${1} ]; then
     echo "Invalid image extension name (must be .dmg)"
@@ -9,7 +9,7 @@ if [ $(basename ${1} .dmg) = ${1} ]; then
 fi
 
 mkdir ${TMP_DIR}
-for i in rpi3_fw/* config.txt; do
+for i in rpi3_fw/* config.txt FAT_R.txt; do
     cp ${i} ${TMP_DIR}/
 done;
 

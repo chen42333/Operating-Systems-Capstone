@@ -259,8 +259,8 @@ static void buddy_merge_block(int idx, int block_size_exp) {
         return;
     }
 
-    small_idx = (idx < buddy_idx) ? idx : buddy_idx;
-    big_idx = (idx > buddy_idx) ? idx : buddy_idx;
+    small_idx = MIN(idx, buddy_idx);
+    big_idx = MAX(idx, buddy_idx);
 
 #ifdef TEST_MEM
     log("merge blocks of %u (pages) size from index 0x%x and 0x%x, to a block of %u (pages) size\r\n" \

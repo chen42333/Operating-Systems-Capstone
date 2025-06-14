@@ -24,7 +24,7 @@ long tmpfs_write(struct file *file, const void *buf, size_t len) {
 
 long tmpfs_read(struct file *file, void *buf, size_t len) {
     void *s = file->vnode->internal + file->f_pos;
-    size_t read_sz = (len < file->vnode->file_size - file->f_pos) ? len : file->vnode->file_size - file->f_pos;
+    size_t read_sz = MIN(len, file->vnode->file_size - file->f_pos);
 
     memcpy(buf, s, read_sz);
     file->f_pos += read_sz;

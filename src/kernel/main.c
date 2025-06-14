@@ -14,6 +14,8 @@
 #include "tmpfs.h"
 #include "file.h"
 #include "dev.h"
+#include "sd.h"
+#include "fat32.h"
 
 /* Test functions */
 void mem_alloc();
@@ -58,6 +60,9 @@ int main(void *_dtb_addr) {
     tmpfs_init();
     initramfs_init();
     device_file_init();
+
+    sd_init();
+    fat32_init();
 
     init_pcb();
     thread_create(idle, NULL);

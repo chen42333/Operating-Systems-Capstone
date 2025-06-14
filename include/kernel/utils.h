@@ -15,6 +15,9 @@
 
 #define MMIO_BASE (void*)(0x3f000000 + v_kernel_space)
 
+#define MAX(x, y) ((x > y) ? x : y)
+#define MIN(x, y) ((x < y) ? x : y)
+
 typedef uint64_t size_t;
 
 extern char v_kernel_space[];
