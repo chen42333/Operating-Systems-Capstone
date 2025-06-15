@@ -2,6 +2,7 @@
 #define __FAT32_H
 
 #include "utils.h"
+#include "list.h"
 
 #define FAT32_MOUNT_POINT "/boot"
 #define LFN_NAME_LEN 255
@@ -49,6 +50,13 @@ struct __attribute__((packed)) s_dir_entry {
     uint32_t DIR_FileSize;
 };
 
+struct fat32_f_data {
+    bool dirty; // If the file is clean, content_cache will be empty
+    uint32_t clus_idx;
+    struct list content_cache; // Each element is a sector of file content
+};
+
 void fat32_init();
+void sync();
 
 #endif

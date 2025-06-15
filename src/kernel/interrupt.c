@@ -294,9 +294,9 @@ seg_fault:
         exit();
         disable_int();
     } else {
-        // enable_int();
-        // printf("ESR: 0x%lx\r\nEC: 0x%lx\r\n", esr, ec);
-        // disable_int();
+        enable_int();
+        printf("ESR: 0x%lx\r\nEC: 0x%lx\r\n", esr, ec);
+        disable_int();
     }
 }
 

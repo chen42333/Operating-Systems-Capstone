@@ -5,6 +5,7 @@
 #include "vmem.h"
 #include "file.h"
 #include "dev.h"
+#include "fat32.h"
 
 void syscall_entry(struct trap_frame *frame) {
     enable_int();
@@ -71,6 +72,9 @@ void syscall_entry(struct trap_frame *frame) {
             break;
         case IOCTL:
             frame->RET = ioctl((int)frame->arg(0), (unsigned long)frame->arg(1), (void*)frame->arg(2));
+            break;
+        case SYNC:
+            sync();
             break;
         case SIGRET:
             sigreturn();

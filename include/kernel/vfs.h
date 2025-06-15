@@ -93,7 +93,7 @@ struct vnode {
     file_type type;
     char name[STRLEN];
     size_t file_size; // for file only
-    void *internal; // Depends on FS. eg: this finl content for tmpfs/initramfs, cluster number for FAT32
+    void *internal; // Depends on FS. eg: this finl content for tmpfs/initramfs, fat32_f_data for FAT32
 };
 
 struct filesystem {

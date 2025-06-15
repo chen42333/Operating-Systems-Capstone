@@ -32,7 +32,8 @@ typedef enum syscall {
     CHDIR = 17,
     LSEEK = 18,
     IOCTL = 19,
-    SIGRET = 20
+    SYNC = 20,
+    SIGRET = 21
 } syscall;
 
 struct trap_frame {

@@ -25,124 +25,176 @@ struct {
     uint8_t BPB_NumFATs;
     uint32_t BPB_FATSz32;
     uint32_t BPB_RootClus;
+
+    uint32_t *fat_cache;
+    struct vnode *mount_point;
 } fat32_data;
 
-static uint32_t get_fat_entry(uint32_t clus_idx) {
-    uint32_t fat[fat32_data.BPB_BytsPerSec / sizeof(uint32_t)];
-    int blk_idx = fat32_data.start_blk_idx + fat32_data.BPB_RsvdSecCnt + clus_idx / (BLK_SZ / sizeof(uint32_t));
-    
-    readblock(blk_idx, fat);
-    return fat[clus_idx % (BLK_SZ / sizeof(uint32_t))];
+inline static uint32_t get_fat_entry(uint32_t clus_idx) {
+    return fat32_data.fat_cache[clus_idx];
 }
 
 static void set_fat_entry(uint32_t clus_idx, uint32_t val) {
-    for (int i = 0; i < fat32_data.BPB_NumFATs; i++) {
-        uint32_t fat[fat32_data.BPB_BytsPerSec / sizeof(uint32_t)];
-        int blk_idx = fat32_data.start_blk_idx + fat32_data.BPB_RsvdSecCnt + 
-                        i * fat32_data.BPB_FATSz32 + clus_idx / (BLK_SZ / sizeof(uint32_t));
-        
-        readblock(blk_idx, fat);
-        fat[clus_idx % (BLK_SZ / sizeof(uint32_t))] = val;
-        writeblock(blk_idx, fat);
-    }
-
+    fat32_data.fat_cache[clus_idx] &= ~FAT_VAL_MASK;
+    fat32_data.fat_cache[clus_idx] |= val;
     // TODO: Set FSInfo sector
 }
 
-static uint32_t get_free_clus_idx() {
-    uint32_t fat[fat32_data.BPB_BytsPerSec / sizeof(uint32_t)];
-    uint32_t clus_idx = fat32_data.BPB_RootClus + 1;
+static uint8_t* add_new_cache_sec(struct list *content_cache) {
+    uint8_t *new_sec = malloc(fat32_data.BPB_BytsPerSec);
 
-    while (true) {
-        int blk_idx = fat32_data.start_blk_idx + fat32_data.BPB_RsvdSecCnt + clus_idx / (BLK_SZ / sizeof(uint32_t));
-        
-        readblock(blk_idx, fat);
-        for (int i = clus_idx % (BLK_SZ / sizeof(uint32_t)); i < (BLK_SZ / sizeof(uint32_t)); i++, clus_idx++) {
-            if (fat[i] == FAT_ENTRY_FREE)
-                goto out;
-        }
-    }
+    if (!new_sec)
+        return NULL;
+    memset(new_sec, 0, fat32_data.BPB_BytsPerSec);
+    list_push(content_cache, new_sec);
 
-out:
-    return clus_idx;
+    return new_sec;
 }
 
-static void fat32_mark_modified(struct vnode *node) {
-    // TODO: set ATTR_ARCHIVE bit in the directory entry of the modified file/dir and the ancestors
+static void load_content(struct vnode *node) {
+    struct fat32_f_data *metadata = (struct fat32_f_data*)node->internal;
+    uint32_t clus_idx;
+    int sec_cnt = 0;
+
+    for (clus_idx = metadata->clus_idx; ; clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK) {
+        for (int i = 0; i < fat32_data.BPB_SecPerClus; i++, sec_cnt++) {
+            if (node->type == FILE && sec_cnt * fat32_data.BPB_BytsPerSec >= node->file_size)
+                return;
+            readblock(fat32_data.start_blk_idx + FirstSectorofCluster(clus_idx) + i, add_new_cache_sec(&metadata->content_cache));
+        }
+
+        if (get_fat_entry(clus_idx) == fat32_data.end_of_file)
+            break;
+    }
+}
+
+static struct s_dir_entry* get_dir_entry(struct vnode *node) {
+    struct vnode *dir_node = node->parent;
+    struct fat32_f_data *metadata = (struct fat32_f_data*)dir_node->internal;
+    struct node *cur;
+    uint32_t target_clus_idx = ((struct fat32_f_data*)node->internal)->clus_idx;
+
+    if (list_empty(&metadata->content_cache))
+        load_content(dir_node);
+
+    cur = metadata->content_cache.head;
+
+    while (cur) {
+        for (struct s_dir_entry *d = (struct s_dir_entry*)cur->ptr; (void*)d < cur->ptr + fat32_data.BPB_BytsPerSec; d++) {
+            uint32_t clus_idx = ((uint32_t)d->DIR_FstClusHI << 16) + d->DIR_FstClusLO;
+
+            if (d->DIR_Attr == ATTR_LONG_NAME)
+                continue;
+            if (clus_idx == target_clus_idx)
+                return d;
+        }
+        cur = cur->next;
+    }
+
+    return NULL;
+}
+
+static uint32_t get_free_clus_idx() {
+    for (uint32_t i = 0; i < fat32_data.BPB_FATSz32 * fat32_data.BPB_BytsPerSec / sizeof(uint32_t); i++) {
+        if (fat32_data.fat_cache[i] == FAT_ENTRY_FREE)
+            return i;
+    }
+
+    return ~0;
 }
 
 static void fat32_reg_to_dir_entry(struct vnode *node) {
-    uint8_t buf[fat32_data.BPB_BytsPerSec];
-    uint32_t clus_idx = *(uint32_t*)node->parent->internal;
-    
-    for (; ; clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK) {
-        for (int sec_idx = 0; sec_idx < fat32_data.BPB_SecPerClus; sec_idx++) {
-            readblock(FirstSectorofCluster(clus_idx) + sec_idx + fat32_data.start_blk_idx, buf);
+    struct fat32_f_data *metadata = (struct fat32_f_data*)node->parent->internal;
+    uint32_t clus_idx = metadata->clus_idx;
+    struct node *cur;
+    int sec_cnt = 0;
 
-            for (struct s_dir_entry *d = (struct s_dir_entry*)buf; (uint8_t*)d < buf + fat32_data.BPB_BytsPerSec; d++) {
-                if (d->DIR_Name[0] == DIR_ENTRY_LAST_AND_UNUSED 
-                    || d->DIR_Name[0] == DIR_ENTRY_UNUSED || d->DIR_Name[0] == DIR_ENTRY_UNUSED_JP) {
-                    int i = 0, j = 0;
+    if (list_empty(&metadata->content_cache))
+        load_content(node->parent);
 
-                    if (d->DIR_Name[0] == DIR_ENTRY_LAST_AND_UNUSED) {
-                        struct s_dir_entry *_d = d + 1;
-                        _d->DIR_Name[0] = DIR_ENTRY_LAST_AND_UNUSED;
+    cur = metadata->content_cache.head;
+        
+    while (cur) {
+        for (struct s_dir_entry *d = (struct s_dir_entry*)cur->ptr; (void*)d < cur->ptr + fat32_data.BPB_BytsPerSec; d++) {
+            if (d->DIR_Name[0] == DIR_ENTRY_LAST_AND_UNUSED 
+                || d->DIR_Name[0] == DIR_ENTRY_UNUSED || d->DIR_Name[0] == DIR_ENTRY_UNUSED_JP) {
+                int i = 0, j = 0;
+
+                if (d->DIR_Name[0] == DIR_ENTRY_LAST_AND_UNUSED) {
+                    struct s_dir_entry *_d = d + 1;
+
+                    if ((void*)_d >= cur->ptr + fat32_data.BPB_BytsPerSec) {
+                        uint32_t tmp;
+
+                        _d = (struct s_dir_entry*)add_new_cache_sec(&metadata->content_cache);
+
+                        tmp = get_free_clus_idx();
+                        set_fat_entry(clus_idx, tmp);
+                        set_fat_entry(tmp, fat32_data.end_of_file);
                     }
 
-                    for (; i < strlen(node->name) && node->name[i] != '.'; i++, j++)
-                        d->DIR_Name[j] = node->name[i];
-                    for (; j < sizeof(d->DIR_Name); j++)
-                        d->DIR_Name[j] = SPACE;
-                    i++;
-                    j = 0;
-                    for (; i < strlen(node->name); i++, j++)
-                        d->DIR_Name_Ext[j] = node->name[i];
-                    for (; j < sizeof(d->DIR_Name_Ext); j++)
-                        d->DIR_Name_Ext[j] = SPACE;
-                    
-                    d->DIR_Attr = ATTR_ARCHIVE;
-                    if (node->type == DIR)
-                        d->DIR_Attr |= ATTR_DIRECTORY;
-                    d->DIR_FileSize = node->file_size;
-
-                    d->DIR_FstClusHI = *(uint32_t*)node->internal >> 16;
-                    d->DIR_FstClusLO = *(uint32_t*)node->internal & 0xffff;
-
-                    // TODO: Set other field
-
-                    return;
+                    _d->DIR_Name[0] = DIR_ENTRY_LAST_AND_UNUSED;
                 }
 
-                // FIXME: 
-                // 1. The current cluster may be full and DIR_ENTRY_LAST_AND_UNUSED entry should be moved to new cluster
-                // 2. The filename may be too long and need LFN entries
+                for (; i < strlen(node->name) && node->name[i] != '.'; i++, j++)
+                    d->DIR_Name[j] = node->name[i];
+                for (; j < sizeof(d->DIR_Name); j++)
+                    d->DIR_Name[j] = SPACE;
+                i++;
+                j = 0;
+                for (; i < strlen(node->name); i++, j++)
+                    d->DIR_Name_Ext[j] = node->name[i];
+                for (; j < sizeof(d->DIR_Name_Ext); j++)
+                    d->DIR_Name_Ext[j] = SPACE;
+                
+                d->DIR_Attr = ATTR_ARCHIVE;
+                if (node->type == DIR)
+                    d->DIR_Attr |= ATTR_DIRECTORY;
+                d->DIR_FileSize = node->file_size;
+
+                d->DIR_FstClusHI = ((struct fat32_f_data*)node->internal)->clus_idx >> 16;
+                d->DIR_FstClusLO = ((struct fat32_f_data*)node->internal)->clus_idx & 0xffff;
+
+                // TODO: Set other field
+
+                return;
             }
+            // TODO: The filename may be too long and need LFN entries
         }
+        
+        if (++sec_cnt % fat32_data.BPB_SecPerClus == 0)
+            clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK;
+        cur = cur->next;
     }
+
+    metadata->dirty = true;
 }
 
 static int fat32_create(struct vnode *dir_node, struct vnode **target, const char *component_name, file_type type) {
     int free_clus_idx;
+    struct fat32_f_data *metadata;
 
     *target = malloc(sizeof(struct vnode));
     if (init_vnode(dir_node, *target, type, component_name))
         return -1;
 
     free_clus_idx = get_free_clus_idx();
-    if (!((*target)->internal = malloc(sizeof(uint32_t))))
+    if (!((*target)->internal = malloc(sizeof(struct fat32_f_data))))
         return -1;
-    *(uint32_t*)(*target)->internal = free_clus_idx;
+    metadata = (struct fat32_f_data*)(*target)->internal;
+    metadata->clus_idx = free_clus_idx;
+    metadata->dirty = true;
+    memset(&metadata->content_cache, 0, sizeof(struct list));
     set_fat_entry(free_clus_idx, fat32_data.end_of_file);
 
     fat32_reg_to_dir_entry(*target);
-    fat32_mark_modified(*target);
-    
+
     return 0;
 }
 
 static int fat32_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name) {
     int free_clus_idx;
-    uint8_t buf[fat32_data.BPB_BytsPerSec];
+    struct fat32_f_data *metadata;
     struct s_dir_entry *d;
     
     *target = malloc(sizeof(struct vnode));
@@ -150,99 +202,103 @@ static int fat32_mkdir(struct vnode *dir_node, struct vnode **target, const char
         return -1;
 
     free_clus_idx = get_free_clus_idx();
-    if (!((*target)->internal = malloc(sizeof(uint32_t))))
+    if (!((*target)->internal = malloc(sizeof(struct fat32_f_data))))
         return -1;
-    *(uint32_t*)(*target)->internal = free_clus_idx;
+    metadata = (struct fat32_f_data*)(*target)->internal;
+    metadata->clus_idx = free_clus_idx;
+    metadata->dirty = true;
+    memset(&metadata->content_cache, 0, sizeof(struct list));
     set_fat_entry(free_clus_idx, fat32_data.end_of_file);
-
-    memset(buf, 0, fat32_data.BPB_BytsPerSec);
-    d = (struct s_dir_entry*)buf;
-    strcpy(".", d->DIR_Name);
+    
+    d = (struct s_dir_entry*)add_new_cache_sec(&metadata->content_cache);
+    strcpy(d->DIR_Name, ".");
     d->DIR_Attr = ATTR_ARCHIVE | ATTR_DIRECTORY;
     d++;
-    strcpy("..", d->DIR_Name);
+    strcpy(d->DIR_Name, "..");
     d->DIR_Attr = ATTR_ARCHIVE | ATTR_DIRECTORY;
     d++;
     d->DIR_Name[0] = DIR_ENTRY_LAST_AND_UNUSED;
-    writeblock(FirstSectorofCluster(free_clus_idx), buf);
 
     fat32_reg_to_dir_entry(*target);
-    fat32_mark_modified(*target);
 
     return 0;
 }
 
 static long fat32_write(struct file *file, const void *buf, size_t len) {
     size_t write_sz;
-    uint32_t clus_idx = *(uint32_t*)file->vnode->internal;
+    struct vnode *node = file->vnode;
     uint32_t which_sec = file->f_pos / fat32_data.BPB_BytsPerSec;
-    uint32_t which_clus = which_sec / fat32_data.BPB_SecPerClus;
+    struct s_dir_entry *d = get_dir_entry(node);
+    struct fat32_f_data *metadata = (struct fat32_f_data*)node->internal;
+    uint32_t clus_idx = metadata->clus_idx;
+    struct node *cur;
 
-    for (int i = 0; i < which_clus; i++) 
-        clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK;
+    if (list_empty(&metadata->content_cache) && node->file_size > 0)
+        load_content(node);
 
-    for (write_sz = 0; write_sz < len; ) {
-        uint8_t buffer[BLK_SZ];
+    do {
+        cur = metadata->content_cache.head;
+        for (int i = 0; i < which_sec; i++) 
+            cur = cur->next;
+    } while (!cur && add_new_cache_sec(&metadata->content_cache));
+
+    for (write_sz = 0; write_sz < len; cur = cur->next) {
         size_t sz;
-        int blk_idx = FirstSectorofCluster(clus_idx) + fat32_data.start_blk_idx + which_sec % fat32_data.BPB_SecPerClus;
 
         sz = MIN(len - write_sz, BLK_SZ - file->f_pos % fat32_data.BPB_BytsPerSec);
-        readblock(blk_idx, buffer);
-        memcpy(buffer + file->f_pos % fat32_data.BPB_BytsPerSec, buf + write_sz, sz);
+        memcpy(cur->ptr + file->f_pos % fat32_data.BPB_BytsPerSec, buf + write_sz, sz);
         file->f_pos += sz;
         write_sz += sz;
-        writeblock(blk_idx, buffer);
 
-        if (file->f_pos > file->vnode->file_size)
-            file->vnode->file_size = file->f_pos;
+        if (file->f_pos > node->file_size)
+            node->file_size = file->f_pos;
 
-        if (write_sz < len && ++which_sec % fat32_data.BPB_SecPerClus == 0) {   
-            uint32_t tmp = clus_idx;
+        if (write_sz < len && cur == metadata->content_cache.tail) 
+            add_new_cache_sec(&metadata->content_cache);
 
-            clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK;
-            if (clus_idx == fat32_data.end_of_file) {
-                uint32_t free_clus_idx = get_free_clus_idx();
+        if (++which_sec % fat32_data.BPB_SecPerClus == 0) {
+            uint32_t tmp = get_fat_entry(clus_idx) & FAT_VAL_MASK;
 
-                set_fat_entry(tmp, free_clus_idx);
-                set_fat_entry(free_clus_idx, fat32_data.end_of_file);
-                clus_idx = free_clus_idx;
+            if (tmp == fat32_data.end_of_file) {
+                tmp = get_free_clus_idx();
+                set_fat_entry(clus_idx, tmp);
+                set_fat_entry(tmp, fat32_data.end_of_file);
             }
+            
+            clus_idx = tmp;
         }
     }
-
-    fat32_mark_modified(file->vnode);
+    metadata->dirty = true;
+    d->DIR_FileSize = node->file_size;
+    d->DIR_Attr |= ATTR_ARCHIVE;
+    ((struct fat32_f_data*)node->parent->internal)->dirty = true;
 
     return write_sz;
 }
 
 static long fat32_read(struct file *file, void *buf, size_t len) {
     size_t read_sz;
-    uint32_t clus_idx = *(uint32_t*)file->vnode->internal;
     uint32_t which_sec = file->f_pos / fat32_data.BPB_BytsPerSec;
-    uint32_t which_clus = which_sec / fat32_data.BPB_SecPerClus;
+    struct vnode *node = file->vnode;
+    struct fat32_f_data *metadata = (struct fat32_f_data*)node->internal;
+    struct node *cur;
+    
+    if (list_empty(&metadata->content_cache) && node->file_size > 0)
+        load_content(node);
 
-    for (int i = 0; i < which_clus; i++) 
-        clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK;
+    cur = metadata->content_cache.head;
+    for (int i = 0; i < which_sec; i++)
+        cur = cur->next;
 
-    for (read_sz = 0; read_sz < len; ) {
-        uint8_t buffer[BLK_SZ];
-        size_t sz;
+    for (read_sz = 0; read_sz < len; cur = cur->next) {
+        size_t sz = MIN(MIN(len - read_sz, BLK_SZ - file->f_pos % fat32_data.BPB_BytsPerSec), file->vnode->file_size - file->f_pos);
 
-        sz = MIN(len - read_sz, BLK_SZ - file->f_pos % fat32_data.BPB_BytsPerSec);
-        sz = MIN(sz, file->vnode->file_size - file->f_pos);
-        readblock(FirstSectorofCluster(clus_idx) + fat32_data.start_blk_idx + which_sec % fat32_data.BPB_SecPerClus, buffer);
-        memcpy(buf + read_sz, buffer + file->f_pos % fat32_data.BPB_BytsPerSec, sz);
+        memcpy(buf + read_sz, cur->ptr + file->f_pos % fat32_data.BPB_BytsPerSec, sz);
         file->f_pos += sz;
         read_sz += sz;
 
         if (file->f_pos >= file->vnode->file_size)
             break;
-
-        if (read_sz < len && ++which_sec % fat32_data.BPB_SecPerClus == 0) {
-            clus_idx = get_fat_entry(clus_idx) & FAT_VAL_MASK;
-            if (clus_idx == fat32_data.end_of_file)
-                break;
-        }
     }
 
     return read_sz;
@@ -320,25 +376,28 @@ static void fat32_parse_sd_recursive(struct vnode *parent, uint32_t clus_idx) {
                     } else {
                         for (i = 0; d->DIR_Name[i] != SPACE && i < sizeof(d->DIR_Name); i++)
                             name[i] = d->DIR_Name[i];
-                        name[i++] = '.';
+                        if (d->DIR_Name_Ext[0] != SPACE)
+                            name[i++] = '.';
                         for (int j = 0; d->DIR_Name_Ext[j] != SPACE && j < sizeof(d->DIR_Name_Ext) + sizeof(d->DIR_Name_Ext); i++, j++)
                             name[i] = d->DIR_Name_Ext[j];
                         name[i] = '\0';
                     }
 
+                    node = malloc(sizeof(struct vnode));
+
                     if ((d->DIR_Attr & ~ATTR_ARCHIVE) == ATTR_DIRECTORY) {
-                        node = malloc(sizeof(struct vnode));
                         init_vnode(parent, node, DIR, name);
                         fat32_parse_sd_recursive(node, next_clus_idx);
                     } else {
-                        node = malloc(sizeof(struct vnode));
                         init_vnode(parent, node, FILE, name);
-
                         node->file_size = d->DIR_FileSize;
-                        if (!(node->internal = malloc(sizeof(uint32_t))))
-                            return;
-                        *(uint32_t*)node->internal = next_clus_idx;
                     }
+
+                    if (!(node->internal = malloc(sizeof(struct fat32_f_data))))
+                        return;
+                    ((struct fat32_f_data*)node->internal)->clus_idx = next_clus_idx;
+                    ((struct fat32_f_data*)node->internal)->dirty = false;
+                    memset(&((struct fat32_f_data*)node->internal)->content_cache, 0, sizeof(struct list));
                 }
             }
         }
@@ -348,6 +407,8 @@ out:
 }
 
 static int fat32_setup_mount(struct filesystem *fs, struct mount *mount, struct vnode *dir_node, const char *component) {
+    struct fat32_f_data *metadata;
+
     if (!(mount->root->v_ops = malloc(sizeof(struct vnode_operations))))
         return -1;
     if (!(mount->root->f_ops = malloc(sizeof(struct file_operations)))) {    
@@ -375,12 +436,18 @@ static int fat32_setup_mount(struct filesystem *fs, struct mount *mount, struct 
 
     mount->root->mount = mount;
 
-    if (!(mount->root->internal = malloc(sizeof(uint32_t)))) {
+    if (!(mount->root->internal = malloc(sizeof(struct fat32_f_data)))) {
         free(mount->root->v_ops);
         free(mount->root->f_ops);
         return -1;
     }
-    *(uint32_t*)mount->root->internal = fat32_data.BPB_RootClus;
+    metadata = (struct fat32_f_data*)mount->root->internal;
+    metadata->clus_idx = fat32_data.BPB_RootClus;
+    metadata->dirty = false;
+    memset(&metadata->content_cache, 0, sizeof(struct list));
+
+    fat32_data.mount_point = mount->root;
+
     fat32_parse_sd_recursive(mount->root, fat32_data.BPB_RootClus);
 
     return 0;
@@ -433,6 +500,12 @@ static int parse_fat32_metadata() {
     fat = (uint32_t*)buf;
     fat32_data.end_of_file = fat[1];
 
+    if (!(fat32_data.fat_cache = malloc(fat32_data.BPB_FATSz32 * fat32_data.BPB_BytsPerSec)))
+        return -1;
+    for (int i = 0; i < fat32_data.BPB_FATSz32; i++)
+        readblock(fat32_data.start_blk_idx + fat32_data.BPB_RsvdSecCnt + i, 
+                (uint8_t*)fat32_data.fat_cache + fat32_data.BPB_BytsPerSec * i);
+
     return 0;
 }
 
@@ -452,4 +525,40 @@ void fat32_init() {
     register_filesystem(fat32);
     vfs_mkdir(FAT32_MOUNT_POINT, &node);
     vfs_mount(FAT32_MOUNT_POINT, fat32->name, 0);
+}
+
+static void sync_file_recursive(struct vnode *node) {
+    struct fat32_f_data *metadata = (struct fat32_f_data*)node->internal;
+    struct node *child = node->children.head;
+
+    if (metadata->dirty) {
+        uint32_t clus_idx = metadata->clus_idx;
+        int which_sec = 0;
+
+        while (!list_empty(&metadata->content_cache)) {
+            uint8_t *buf = list_pop(&metadata->content_cache);
+            writeblock(fat32_data.start_blk_idx + FirstSectorofCluster(clus_idx) + which_sec, buf);
+
+            if (++which_sec % fat32_data.BPB_SecPerClus == 0)
+                clus_idx = fat32_data.fat_cache[clus_idx];
+            
+            if (which_sec * fat32_data.BPB_BytsPerSec >= node->file_size)
+                break;
+        }
+        metadata->dirty = false;
+    }
+
+    while (child) {
+        sync_file_recursive((struct vnode*)child->ptr);
+        child = child->next;
+    }
+}
+
+void sync() {
+    for (int i = 0; i < fat32_data.BPB_NumFATs; i++) {
+        for (int j = 0; j < fat32_data.BPB_FATSz32; j++)
+            writeblock(fat32_data.start_blk_idx + fat32_data.BPB_RsvdSecCnt + fat32_data.BPB_FATSz32 * i + j, 
+                        (uint8_t*)fat32_data.fat_cache + fat32_data.BPB_BytsPerSec * j);
+    }
+    sync_file_recursive(fat32_data.mount_point);
 }
