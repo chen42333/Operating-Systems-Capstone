@@ -16,6 +16,8 @@ static bool same_fs_name(void *ptr, void *data) {
 }
 
 int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **parent_vnode, char *component) {
+    disable_int();
+
     struct mount *mnt;
     struct strtok_ctx *ctx;
     char *comp = strtok_r((char*)pathname, "/", &ctx), *tmp;
@@ -47,6 +49,7 @@ int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **
         mnt->root->v_ops->lookup(parent, &cur, comp);
         if (!cur) {
             if (strtok_r(NULL, "/", &ctx) != NULL) {
+                enable_int();
                 err("%s: No such directory\r\n", comp);
                 return -1;
             } 
@@ -61,6 +64,8 @@ int find_parent_vnode(const char *pathname, struct vnode **node, struct vnode **
     strcpy(component, comp);
 
     free(ctx);
+
+    enable_int();
 
     return 0;
 }
@@ -84,6 +89,7 @@ int vfs_mount(const char *target, const char *filesystem, unsigned flags) {
     struct mount *mnt;
     struct vnode *node, *parent_vnode = NULL;
     char component[STRLEN];
+    int ret;
 
     if (!fs) {
         err("File system not registered\r\n");
@@ -120,11 +126,16 @@ int vfs_mount(const char *target, const char *filesystem, unsigned flags) {
         node->hidden = true; // Hide the original vnode until unmount
     }
 
-    return fs->setup_mount(fs, mnt, parent_vnode, component);
+    disable_int();
+    ret = fs->setup_mount(fs, mnt, parent_vnode, component);
+    enable_int();
+
+    return ret;
 }
 
 int vfs_open(const char *pathname, int flags, struct file **target) {
     struct vnode *node;
+    int ret;
 
     if (vfs_lookup(pathname, &node) < 0)
         return -1;
@@ -138,11 +149,21 @@ int vfs_open(const char *pathname, int flags, struct file **target) {
         }
     }
 
-    return node->f_ops->open(node, flags, target);
+    disable_int();
+    ret = node->f_ops->open(node, flags, target);
+    enable_int();
+
+    return ret;
 }
 
 int vfs_close(struct file *file) {
-    return file->f_ops->close(file);
+    int ret;
+
+    disable_int();
+    ret = file->f_ops->close(file);
+    enable_int();
+
+    return ret;
 }
 
 long vfs_write(struct file *file, const void *buf, size_t len) {
@@ -164,65 +185,104 @@ long vfs_read(struct file *file, void *buf, size_t len) {
 }
 
 int vfs_lseek64(struct file *file, long offset, int whence) {
-    return file->f_ops->lseek64(file, offset, whence);
+    int ret;
+
+    disable_int();
+    ret = file->f_ops->lseek64(file, offset, whence);
+    enable_int();
+
+    return ret;
 }
 
 int vfs_ioctl(struct file *file, unsigned long request, void *data) {
-    return file->f_ops->ioctl(file, request, data);
+    int ret;
+
+    disable_int();
+    ret = file->f_ops->ioctl(file, request, data);
+    enable_int();
+
+    return ret;
 }
 
 int vfs_mkdir(const char *pathname, struct vnode**target) {
+    disable_int();
+
     struct mount *mnt;
     struct vnode *node, *parent_vnode;
     char component[STRLEN];
 
-    if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0)
+    if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0) {
+        enable_int();
         return -1;
+    }
     if (node) {
+        enable_int();
         err("Directoty exists\r\n");
         return -1;
     }
     mnt = parent_vnode->mount;
 
-    if (mnt->root->v_ops->mkdir(parent_vnode, target, component) < 0)
+    if (mnt->root->v_ops->mkdir(parent_vnode, target, component) < 0) {
+        enable_int();
         return -1;
+    }
+
+    enable_int();
 
     return 0;
 }
 
 int vfs_create(const char *pathname, struct vnode **target, file_type type) {
+    disable_int();
+
     struct mount *mnt;
     struct vnode *node, *parent_vnode;
     char component[STRLEN];
 
-    if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0)
+    if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0) {
+        enable_int();
         return -1;
+    }
     if (node) {
+        enable_int();
         err("File exists\r\n");
         return -1;
     }
     mnt = parent_vnode->mount;
 
-    if (mnt->root->v_ops->create(parent_vnode, target, component, type) < 0)
+    if (mnt->root->v_ops->create(parent_vnode, target, component, type) < 0) {
+        enable_int();
         return -1;
+    }
+
+    enable_int();
 
     return 0;
 }
 
 int vfs_lookup(const char *pathname, struct vnode **target) {
+    disable_int();
+
     struct vnode *node, *parent_vnode;
     char component[STRLEN];
 
-    if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0)
+    if (find_parent_vnode(pathname, &node, &parent_vnode, component) < 0) {
+        enable_int();
         return -1;
+    }
 
     *target = node;
+
+    enable_int();
 
     return 0;
 }
 
 int init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const char *component_name) {
+    disable_int();
+
     if (!node) {
+        enable_int();
         err("Failed to allocate vnode\r\n");
         return -1;
     }
@@ -239,6 +299,8 @@ int init_vnode(struct vnode *dir_node, struct vnode *node, file_type type, const
     memset(&node->children, 0, sizeof(struct list));
     strcpy(node->name, component_name);
     node->file_size = 0;
+
+    enable_int();
         
     return 0;
 }
