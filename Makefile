@@ -36,10 +36,9 @@ OBJS = $(SRCS:.c=.o)
 OBJS := $(OBJS:.S=.o)
 DEPS = $(OBJS:.o=.d)
 LDFILE = $(SRC_DIR)/$(TARGET)/linker.ld
-_PROGS = *.elf *.img
-_PROGS += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
-# _PROGS += $(shell find $(RAMDISK_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
-PROGS=$(echo $(_PROGS) | tr ' ' '\n' | grep -v '^nycuos\.img$' | tr '\n' ' ')
+PROGS = *.elf *.img
+PROGS += $(shell find $(TEST_PROG_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
+# PROGS += $(shell find $(RAMDISK_DIR) -type f \( -name "*.elf" -o -name "*.img" \))
 RAMDISK_DIR = ./rootfs
 RAMDISK = initramfs.cpio
 RAMDISK_FILES = $(shell find $(RAMDISK_DIR) -type f ! -name "*.img" )
